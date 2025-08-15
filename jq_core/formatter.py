@@ -8,7 +8,7 @@ class JQFormatter:
         if isinstance(jq_program, str):
             self.program = parser.parse_sts()
 
-
+"Minor change"
 
 
 
