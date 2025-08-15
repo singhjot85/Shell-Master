@@ -1,0 +1,1 @@
+Skipping docker setup as of now to keep devlopment simple, will be implemented in future.
