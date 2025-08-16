@@ -21,32 +21,37 @@ class StringNormalizer:
         """
         return re.sub(r'\s+', ' ', s)
 
-    def _remove_all_whitespace(self, s: str) -> str:
+    def _remove_newline_tabline(self, s: str):
+        return re.sub(r'\n+', '', re.sub(r'\t+', '', s))
+
+    def _remove_whitespaces(self, s: str):
         """
         Remove all whitespace entirely.
         """
         return re.sub(r'\s+', '', s)
 
-    def normalize(self, strip_edges: bool, collapse_spaces: bool = True) -> str:
+    def normalize(
+        self, 
+        remove_spaces: bool = False,
+        remove_controls: bool = False
+    ) -> str:
         """
         Normalizes the string.
 
         Args:
-            strip_edges: If True, trim leading/trailing whitespace after normalization.
-            collapse_spaces: 
-                If True, multiple spaces → single space.
-                If False, all whitespace removed.
+            remove_spaces (bool): Entirely remove all the spaces.
+            remove_controls (bool): Remove \n,\t and other control characters.
         """
-        s = self.program
-        s = self._remove_control_characters(s)
-
-        if collapse_spaces:
-            s = self._collapse_whitespace(s)
-        else:
-            s = self._remove_all_whitespace(s)
+        s = self.program 
+        s = s.strip()
+        s = self._collapse_whitespace(s)
         
-        if strip_edges and collapse_spaces:
-            s = s.strip()
+        if remove_controls:
+            s = self._remove_control_characters(s)
+            s = self._remove_newline_tabline(s)
+
+        if remove_spaces:
+            s = self._remove_whitespaces(s)
 
         return s
 
@@ -57,13 +62,16 @@ class BaseParser:
     Args:
         program(str): JQ program to parse
     """
-    def __init__(self, program: str):
-        self.program = program
+    def __init__(self):
+        self.program = ''
 
-    def parse_sts(self):
+    def parse_sts(self, program: str):
         """
         A string to string parser, takes a string jq program as input,
         and parse it for other tools.
         """
+        self.program = program
         normalizer = StringNormalizer(self.program)
-        return normalizer.normalize(collapse_spaces=False, strip_edges=True)
+        if normalizer:
+            self.program = normalizer.normalize(True,True)
+        return self.program

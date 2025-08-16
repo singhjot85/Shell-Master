@@ -35,4 +35,120 @@ extract jq program from: `({ jq-program }//null)` or `{ jq-program }`.
     3. `[]`or`()`or`{}` -> `[<newline><indent><newline>]` only if chars between brackets are >=30.
     2. `|` -> `<space>|\n<indent>`
 
+## Approach - 2:
+High level approach:
+1. Break the entire program find `{}, ()` and split in three parts: prefix, root-jq, postfix.
+2. Break in tokens for each `{},()` using `: and ,` rule.
+3. For each value in tokens run the formatter recursively.
+
+
 ## Debugger:
+TODO: Develop a debugger to debug the jq, at what line it fails.
+
+
+## Python Regex (Tutorial):
+
+### Core Functions
+- `re.compile(pattern)` → Compile regex for reuse.
+- `re.search(pattern, string)` → Find **first** match.
+- `re.findall(pattern, string)` → Find **all** matches (list).
+- `re.sub(pattern, repl, string)` → Replace matches.
+- `re.match(pattern, string)` → Match only at **start** of string.
+### Common Regex Tokens
+- `\d` → Digit (0–9)  
+- `\w` → Word char (letters, digits, underscore)  
+- `\s` → Whitespace (space, tab, newline)  
+- `.` → Any char except newline  
+### Quantifiers
+- `+` → One or more  
+- `*` → Zero or more  
+- `?` → Zero or one  
+### Character Sets
+- `[abc]` → One of `a`, `b`, `c`  
+- `[^abc]` → Not `a`, `b`, or `c`  
+- `[0-9]` → Any digit  
+- `[a-zA-Z]` → Any letter  
+### Anchors
+- `^` → Start of string  
+- `$` → End of string  
+
+
+###  Real-World Examples
+```python
+import re
+
+# Simple
+text = "Call me at 9876543210 or 123-456-7890."
+phones = re.findall(r"\d{10}|\d{3}-\d{3}-\d{4}", text)
+print(phones)  # ['9876543210', '123-456-7890']
+
+# A little Complex
+text = "Send to: test.email+alex@domain.co, hello@sub.domain.org"
+emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", text)
+print(emails)  
+# ['test.email+alex@domain.co', 'hello@sub.domain.org']
+```
+---
+
+
+## Rough Work:
+sbaLoanNumber: .sba_number,
+loanStatus: "Is, funded Funded",
+
+Tokenizer No. 1:
+```C++
+pair<int,int> keyIndices(0,0), valueindices(0,0);
+bool isKey=true, isString=true;
+map<pair<String,String>> tokens;
+for (int i=0, i<s.size(), i++){
+    // Handling for strings (just flip the switch)
+    if(s[i]=='"') isString= !isString;
+
+    if(s[i]==':'){
+        isKey = false;
+        keyIndices[1]= i-1;
+        valueIndices[0]= i+1;
+        tokens.insert({
+            s.substr(keyIndices[0],keyIndices[1]),
+            ""
+        });
+    }
+    if(s[i]==',' && !isString){
+        isKey= true;
+        keyIndices[0]= i+1; 
+        valueIndices[1]= i-1;
+        String key= s.substr(keyIndices[0],keyIndices[1]);
+        tokens[key]= s.substr(valueindices[0],valueindices[1]);
+    }
+}
+```
+```python
+is_key, is_string= (True, False)
+key_indices, val_indices= ([0,0],[0,0])
+tokens= {}
+
+for i, ch in enumerate(program):
+    if ch == '"':
+        is_string = not is_string
+        continue
+
+    if not is_string:
+        if ch == ':':
+            is_key = False
+            key_indices[1] = i
+            key = program[key_indices[0]:key_indices[1]].strip()
+            val_indices[0] = i+1
+
+        elif ch == ',':
+            is_key = True
+            val_indices[1] = i
+            tokens[key] = program[val_indices[0]:val_indices[1]].strip()
+            key_indices[0] = i+1
+
+if key is not None and val_indices[0] < len(program):
+    tokens[key] = program[val_indices[0]:].strip()
+
+```
+Problems: break in nested jq's, ex: `{ "a": 1, "b": "x,y", "c": { a: { b: 1 } } }`
+
+
