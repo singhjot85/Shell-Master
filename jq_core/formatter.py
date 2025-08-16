@@ -1,69 +1,130 @@
 import re
 from . import BaseParser
 
+import re
+import json
+
 class JQFormatter:
-    def __init__(self, jq_program):
-        parser = BaseParser(jq_program)
+    def __init__(self, indent_size: int = 4):
         self.program = ''
+        self.parser = BaseParser()
+        self.indent_size = 4
+
+    def extract_tokens(self, input_str: str):
+        pass
+
+    def extract_base_jq(self, jq_program: str):
+        pass
+    
+    def format(self, jq_program):
+
         if isinstance(jq_program, str):
-            self.program = parser.parse_sts()
+            self.program = self.parser.parse_sts(jq_program)
+        else:
+            self.program = ''
 
-"Minor change"
-
-
-
-
-
-STRING_PATTERN = r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\''
-COMMENT_PATTERN = r'#.*?$'
-TOKEN_PATTERN = rf'{STRING_PATTERN}|[\[\]\{{\}}\(\)\|,]|[^\[\]\{{\}}\(\)\|,#\s]+|{COMMENT_PATTERN}'
-
-def format_jq(program: str, indent_width: int = 4) -> str:
-    """
-    Formats a JQ program into a readable, consistent style.
-    Preserves comments and quoted strings.
-    """
-    tokens = re.findall(TOKEN_PATTERN, program, re.MULTILINE)
-    indent = 1
-    formatted_lines = []
-    current_line = []
-
-    def flush_line():
-        if current_line:
-            formatted_lines.append(" " * (indent * indent_width) + " ".join(current_line).rstrip())
-            current_line.clear()
-
-    for token in tokens:
-        token = token.strip("\n\r ")
-        if not token:
-            continue
-
-        # Comments: put them on their own line
-        if token.startswith("#"):
-            flush_line()
-            formatted_lines.append(" " * (indent * indent_width) + token)
-            continue
-
-        # Closing brackets
-        if token in ["]", "}", ")"]:
-            flush_line()
-            indent -= 1
-
-        current_line.append(token)
-
-        # After opening brackets
-        if token in ["[", "{", "("]:
-            flush_line()
-            indent += 1
-        # After commas and pipes
-        elif token in [",", "|"]:
-            flush_line()
-
-        # Closing brackets again flush immediately
-        if token in ["]", "}", ")"]:
-            flush_line()
-
-    flush_line()
-    return "\n".join(formatted_lines)
+        pre, root, post = self.extract_base_jq(self.program)
+        tokens = self.tokenize_jq(root)
+        for key, jq in tokens.items():
+            # TODO: Figure out base/root condition.
+            # if root:
+            #     continue
+            tokens[key] = self.format(jq)
+            
 
 
+
+    def tokenize_jq(program: str):
+
+        def parse_object(obj_str: str):
+            tokens = {}
+            is_string = False
+            key = None
+            start = 1  # skip leading '{'
+
+            brace_depth = 0
+            bracket_depth = 0
+
+            i = 1
+            while i < len(obj_str)-1:  # skip trailing '}'
+                ch = obj_str[i]
+
+                # Toggle string state (ignore escaped quotes)
+                if ch == '"' and obj_str[i-1] != '\\':
+                    is_string = not is_string
+
+                elif not is_string:
+                    if ch == '{':
+                        brace_depth += 1
+                    elif ch == '}':
+                        brace_depth -= 1
+                    elif ch == '[':
+                        bracket_depth += 1
+                    elif ch == ']':
+                        bracket_depth -= 1
+
+                    elif ch == ':' and brace_depth == 0 and bracket_depth == 0 and key is None:
+                        key = obj_str[start:i].strip()
+                        start = i+1
+
+                    elif ch == ',' and brace_depth == 0 and bracket_depth == 0 and key is not None:
+                        value = obj_str[start:i].strip()
+                        tokens[key] = parse_value(value)
+                        key = None
+                        start = i+1
+
+                i += 1
+
+            # Handle last key:value before '}'
+            if key is not None and start < len(obj_str)-1:
+                value = obj_str[start:len(obj_str)-1].strip()
+                tokens[key] = parse_value(value)
+
+            return tokens
+
+        def parse_array(arr_str: str):
+            items = []
+            is_string = False
+            start = 1  # skip '['
+
+            brace_depth = 0
+            bracket_depth = 0
+
+            i = 1
+            while i < len(arr_str)-1:  # skip ']'
+                ch = arr_str[i]
+
+                if ch == '"' and arr_str[i-1] != '\\':
+                    is_string = not is_string
+
+                elif not is_string:
+                    if ch == '{':
+                        brace_depth += 1
+                    elif ch == '}':
+                        brace_depth -= 1
+                    elif ch == '[':
+                        bracket_depth += 1
+                    elif ch == ']':
+                        bracket_depth -= 1
+
+                    elif ch == ',' and brace_depth == 0 and bracket_depth == 0:
+                        items.append(parse_value(arr_str[start:i].strip()))
+                        start = i+1
+
+                i += 1
+
+            # Last item
+            if start < len(arr_str)-1:
+                items.append(parse_value(arr_str[start:len(arr_str)-1].strip()))
+
+            return items
+
+        def parse_value(val: str):
+            if val.startswith("{") and val.endswith("}"):
+                return parse_object(val)
+            elif val.startswith("[") and val.endswith("]"):
+                return parse_array(val)
+            else:
+                return val  # primitive (number, string, bool, null, jq expr)
+
+        return parse_value(program)
