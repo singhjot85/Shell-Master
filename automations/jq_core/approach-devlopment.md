@@ -41,6 +41,15 @@ High level approach:
 2. Break in tokens for each `{},()` using `: and ,` rule.
 3. For each value in tokens run the formatter recursively.
 
+## Approach - 3:
+High level approach:
+1. Parse to an AST(Abstract Syntax Tree)
+    1. Tokenize the given input into keywords, identifiers, literals etc.
+    2. Parse the tokens to AST.
+2. Walk AST with the rules.
+3. Output pretty printed code.
+4. [TODO-Req] Handles the comments and whitespace.
+
 
 ## Debugger:
 TODO: Develop a debugger to debug the jq, at what line it fails.
