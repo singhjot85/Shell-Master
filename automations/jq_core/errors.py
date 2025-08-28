@@ -1,5 +1,7 @@
 class LexerError(Exception):
-    pass
-
-def lexer_error_msg(msg:str, line: int, col: int) -> str:
-    return f"Error occurred while lexing at [{line}:{col}]: {msg}"
+    """ Error class for Lexer """
+    def __init__(self, **kwargs):
+        self.line = kwargs.get("line", 0)
+        self.column = kwargs.get("col", 0)
+        self.message = kwargs.get("msg", "Unkown error")
+        super().__init__(f"Error occurred while lexing at [{self.line}:{self.column}]: {self.message}")

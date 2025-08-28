@@ -68,7 +68,16 @@ class TokenType(Enum):
     # Miscs
     EOF = "EOF"
 
-KEYWORDS = {
+BRACKET_MAPPING = {
+    "(":  TokenType.LPAREN, 
+    ")":  TokenType.RPAREN,
+    "[":  TokenType.LSQRBRC,
+    "]":  TokenType.RSQRBRC,
+    "{":  TokenType.LCURLBRC, 
+    "}":  TokenType.RCURLBRC,
+}
+
+KEYWORDS_MAPPING = {
     "if": TokenType.IF,
     "or": TokenType.OR,
     "end": TokenType.END,
