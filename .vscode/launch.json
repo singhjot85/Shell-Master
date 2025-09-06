@@ -1,0 +1,20 @@
+{
+  "configurations": [
+    {
+      "name": "Python: Interactive Shell",
+      "type": "python",
+      "request": "launch",
+      "program": "python",
+      "console": "integratedTerminal"
+    },
+    {
+        "name": "Attach to Poetry Python",
+        "type": "python",
+        "request": "attach",
+        "connect": {
+            "host": "localhost",
+            "port": 5678
+        }
+    }
+  ]
+}

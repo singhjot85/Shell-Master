@@ -1,18 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
 
-
-STRING_MAPPING= {
-    '"':'"', 
-    '\\':'\\', 
-    '/':'/',
-    'b':'\b', 
-    'f':'\f', 
-    'n':'\n', 
-    'r':'\r', 
-    't':'\t'
-}
-
 class TokenType(Enum):
     # Literals
     NULL = "NULL"
@@ -24,6 +12,7 @@ class TokenType(Enum):
     # Identifiers
     IDENTIFIER = "IDENTIFIER"
     VARIABLE = "VARIABLE"
+    ACCESSOR_IDENTIFIER = "ACCESSOR_IDENTIFIER"
 
     # Operators & punctuation
     DOT = "."
@@ -68,26 +57,42 @@ class TokenType(Enum):
     # Miscs
     EOF = "EOF"
 
-BRACKET_MAPPING = {
-    "(":  TokenType.LPAREN, 
-    ")":  TokenType.RPAREN,
-    "[":  TokenType.LSQRBRC,
-    "]":  TokenType.RSQRBRC,
-    "{":  TokenType.LCURLBRC, 
-    "}":  TokenType.RCURLBRC,
+WHITE_SPACES = [' ', '\t', '\r']
+NEW_LINES = ['\n']
+COMMENT_HASH = '#'
+STRING_QUOTE = '"'
+
+STRING_MAPPING= {
+    '"':'"', 
+    '\\':'\\', 
+    '/':'/',
+    'b':'\b', 
+    'f':'\f', 
+    'n':'\n', 
+    'r':'\r', 
+    't':'\t'
+}
+
+BRACKETS = {
+    "(": TokenType.LPAREN,
+    ")": TokenType.RPAREN,
+    "[": TokenType.LSQRBRC,
+    "]": TokenType.RSQRBRC,
+    "{": TokenType.LCURLBRC,
+    "}": TokenType.RCURLBRC,
 }
 
 KEYWORDS_MAPPING = {
-    "if": TokenType.IF,
-    "or": TokenType.OR,
-    "end": TokenType.END,
-    "and": TokenType.AND,
-    "not": TokenType.NOT,
-    "null": TokenType.NULL,
-    "true": TokenType.TRUE,
-    "then": TokenType.THEN,
-    "else": TokenType.ELSE,
-    "false": TokenType.FALSE,
+    TokenType.IF.value: TokenType.IF,
+    TokenType.OR.value: TokenType.OR,
+    TokenType.END.value: TokenType.END,
+    TokenType.AND.value: TokenType.AND,
+    TokenType.NOT.value: TokenType.NOT,
+    TokenType.NULL.value: TokenType.NULL,
+    TokenType.TRUE.value: TokenType.TRUE,
+    TokenType.THEN.value: TokenType.THEN,
+    TokenType.ELSE.value: TokenType.ELSE,
+    TokenType.FALSE.value: TokenType.FALSE
 }
 
 @dataclass
@@ -98,4 +103,4 @@ class Token:
     col: int
 
     def __repr__(self):
-        return f"<Token {self.type}-{self.value}-[{self.line},{self.column}]>"
+        return f"<Token {self.type} - {self.value}]>"
