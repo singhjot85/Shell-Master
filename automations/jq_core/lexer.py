@@ -1,3 +1,4 @@
+from decimal import Decimal
 from . import Token, TokenType, LexerError
 from .constants import (
     STRING_MAPPING, 
@@ -39,7 +40,6 @@ class Lexer:
             #     continue
             if ch in NEW_LINES:
                 self._line_break()
-
             if ch == COMMENT_HASH: # Skip comments as of now
                 # TODO: handle Comments
                 self.skip_comments()
@@ -47,27 +47,26 @@ class Lexer:
 
             if ch in BRACKETS:
                 tokens.append(self._create_token(BRACKETS[ch]))
-
-            if ch == TokenType.DOT.value:
-                tokens.extend(self.handle_accessor())
-
+            if ch == TokenType.COMMA.value:
+                tokens.append(self._create_token(TokenType.COMMA))
             if ch == TokenType.COLON.value:
                 tokens.append(self._create_token(TokenType.COLON))
-            
             if ch == TokenType.PIPE.value:
                 tokens.append(self._create_token(TokenType.PIPE))
-
+            
+            if ch == TokenType.DOT.value:
+                tokens.extend(self.handle_accessor())
+                continue
             if self._is_identifier_begin(ch):
                 tokens.append(self.handle_identifier())
-
-            # if ch == STRING_QUOTE: # Handle Strings
-            #     tokens.append(self.scan_string())
-            #     continue
-
-            # if ch.isdigit() or (ch=='-' and self._peek().isdigit()):
-            #     # Handles Integers/Floats
-            #     tokens.append(self.scan_number(ch))
-            #     continue
+                continue
+            if ch == STRING_QUOTE: # Handle Strings
+                tokens.append(self.scan_string())
+                continue
+            if ch.isdigit() or (ch=='-' and self._peek().isdigit()):
+                # Handles Integers/Floats/Exponents
+                tokens.append(self.scan_number())
+                continue
 
             # if ch == '$': # Handle Variables
             #     tokens.append(self.scan_variable())
@@ -176,84 +175,85 @@ class Lexer:
                 break
             self._advance()
 
-    # def scan_string(self) -> str:
-    #     """ Scans for a string and returns a string Token """
-    #     ret: list = []
-    #     while not self._is_end():
-    #         c = self.current
-    #         if c == '"': # End of String
-    #             return self._create_token(TokenType.STRING, ''.join(ret))
+    def scan_string(self) -> str:
+        """ Scans for a string and returns a string Token """
+        ret: list = []
+        self._advance() # Start String Scanning
+        while not self._is_end():
+            c = self.current
+            if c == '"': # End of String
+                self._advance() # Take out of current string
+                return self._create_token(TokenType.STRING, ''.join(ret))
             
-    #         if c == "\\":
-    #             esc = self._advance()
-    #             if esc in '"\\/bfnrt':
-    #                 ret.append(STRING_MAPPING[esc])
-    #             elif esc == "u": # Read exactly 4 hex digits
-    #                 hex_digits = [self._advance() for _ in range(4)]
-    #                 if not all(d.lower() in '0123456789abcdef' for d in hex_digits): 
-    #                     LexerError(
-    #                         msg="Invalid \\u escape",
-    #                         line=self.line,col=self.col
-    #                     )
-    #                 codepoint = int(''.join(hex_digits), 16)
-    #                 ret.append(chr(codepoint))
-    #         elif c == '\n': # Newline inside stings
-    #             raise LexerError(
-    #                 msg="Unterminated String (Newline)",
-    #                 line=self.line,col=self.col
-    #             )
-    #         else:
-    #             ret.append(c)
+            if c == "\\":
+                esc = self._advance()
+                if esc in '"\\/bfnrt':
+                    ret.append(STRING_MAPPING[esc])
+                elif esc == "u": # Read exactly 4 hex digits
+                    hex_digits = [self._advance() for _ in range(4)]
+                    if not all(d.lower() in '0123456789abcdef' for d in hex_digits): 
+                        LexerError(
+                            msg="Invalid \\u escape",
+                            line=self.line,col=self.col
+                        )
+                    codepoint = int(''.join(hex_digits), 16)
+                    ret.append(chr(codepoint))
+            elif c == '\n': # Newline inside stings
+                raise LexerError(
+                    msg="Newlines inside string are not allowed",
+                    line=self.line,col=self.col
+                )
+            else:
+                ret.append(c)
 
-    #         self._advance()
+            self._advance()
             
-    #     raise LexerError(
-    #         msg="Unterminated String (EOF)",
-    #         line=self.line,col=self.col
-    #     )
+        raise LexerError(
+            msg="Invalid JQ (String must be terminated)",
+            line=self.line,col=self.col
+        )
     
-    # def scan_number(self, first: str) -> Token:
-    #     buf = [first]
+    def scan_number(self) -> str:
+        start_idx = self.current_idx
 
-    #     # Integer's
-    #     while self._peek().isdigit():
-    #         buf.append(self._advance())
+        # Consume leading '-' if present
+        if self.current == "-":
+            self._advance()
 
-    #     # Fractions
-    #     if self._peek() == '.' and self._peek_peek().isdigit():
-    #         buf.append(self._advance())
-    #         while self._peek().isdigit():
-    #             buf.append(self._advance())
+        # Consume digits
+        while self.current is not None and self.current.isdigit():
+            self._advance()
 
-    #     # Exponent
-    #     if self._peek() in 'eE':
-    #         buf.append(self._advance())  # e/E
-    #         if self._peek() in '+-':
-    #             buf.append(self._advance())
-    #         if not self._peek().isdigit():
-    #             raise LexerError(
-    #                 msg="Malformed exponent",
-    #                 line=self.line,col=self.col
-    #             )
-    #         while self._peek().isdigit():
-    #             buf.append(self._advance())
-        
-    #     text = ''.join(buf)
-        
-    #     # choose int vs float
-    #     value = None
-    #     try:
-    #         if any(ch in text for ch in '.eE'):
-    #             value = float(text)
-    #         else:
-    #             value = int(text)
-    #     except ValueError:
-    #         raise LexerError(
-    #             msg="Invalid number",
-    #             line=self.line,col=self.col
-    #         )
+        # Consume optional decimal part
+        if self.current == ".":
+            self._advance()
+            while self.current is not None and self.current.isdigit():
+                self._advance()
 
-    #     return self._create_token(TokenType.NUMBER, value)
+        # Consume optional exponent part
+        if self.current is not None and self.current.lower() == "e":
+            self._advance()
+            # Exponent may have + or -
+            if self.current in {"+", "-"}:
+                self._advance()
+            while self.current is not None and self.current.isdigit():
+                self._advance()
+
+        # Extract the raw substring from start_idx to current position
+        raw_number = self.program[start_idx:self.current_idx]
+
+        value = None
+        if (
+            "e" in raw_number.lower() 
+            or "E" in raw_number.lower()
+        ):
+            value = Decimal(raw_number)
+        elif "." in raw_number:
+            value = float(raw_number)
+        else:
+            value = int(raw_number)
+
+        return self._create_token(TokenType.NUMBER, value)
 
     # def scan_variable(self) -> TokenType:
 
