@@ -7,7 +7,8 @@ from .constants import (
     NEW_LINES,
     COMMENT_HASH,
     STRING_QUOTE,
-    BRACKETS
+    CLOSING_BRACKETS,
+    OPENING_BRACKETS
 )
 
 class Lexer:
@@ -28,61 +29,75 @@ class Lexer:
 
     def tokenize(self) -> list[TokenType] | None:
         """ Return a list of valid JQ tokens given a string of JQ program"""
-        tokens :list[Token] = []
+        try:
+            tokens :list[Token] = []
 
-        while not self._is_end():
-            ch = self.current
-            if not ch:
-                break
+            while not self._is_end():
+                ch = self.current
+                if not ch:
+                    break
 
-            # Not required (Can be made flag enabled if required in future).
-            # if ch in WHITE_SPACES:
-            #     continue
-            if ch in NEW_LINES:
-                self._line_break()
-            if ch == COMMENT_HASH: # Skip comments as of now
-                # TODO: handle Comments
-                self.skip_comments()
-                continue
+                # Not required (Can be made flag enabled if required in future).
+                # if ch in WHITE_SPACES:
+                #     continue
+                if ch in NEW_LINES:
+                    self._line_break()
+                if ch == COMMENT_HASH: # Skip comments as of now
+                    # TODO: handle Comments
+                    self.skip_comments()
+                    continue
 
-            if ch in BRACKETS:
-                tokens.append(self._create_token(BRACKETS[ch]))
-            if ch == TokenType.COMMA.value:
-                tokens.append(self._create_token(TokenType.COMMA))
-            if ch == TokenType.COLON.value:
-                tokens.append(self._create_token(TokenType.COLON))
-            if ch == TokenType.PIPE.value:
-                tokens.append(self._create_token(TokenType.PIPE))
-            
-            if ch == TokenType.DOT.value:
-                tokens.extend(self.handle_accessor())
-                continue
-            if self._is_identifier_begin(ch):
-                tokens.append(self.handle_identifier())
-                continue
-            if ch == STRING_QUOTE: # Handle Strings
-                tokens.append(self.scan_string())
-                continue
-            if ch.isdigit() or (ch=='-' and self._peek().isdigit()):
-                # Handles Integers/Floats/Exponents
-                tokens.append(self.scan_number())
-                continue
+                if ch in KEYWORDS_MAPPING:
+                    tokens.append(self._create_token(KEYWORDS_MAPPING[ch]))
+                if (
+                    ch in OPENING_BRACKETS 
+                    or ch in CLOSING_BRACKETS
+                ):
+                    # TODO: Handle brackets to recursively tokenize nested JQ's
+                    # [...<T1>,<T2>,<T3>,[<T1>,<T2>]<T5>...]
+                    tokens.extend(self.handle_brackets())
+                    # tokens.append(self._create_token(BRACKETS[ch]))
+                if ch == TokenType.COMMA.value:
+                    tokens.append(self._create_token(TokenType.COMMA))
+                if ch == TokenType.COLON.value:
+                    tokens.append(self._create_token(TokenType.COLON))
+                if ch == TokenType.PIPE.value:
+                    tokens.append(self._create_token(TokenType.PIPE))
 
-            # if ch == '$': # Handle Variables
-            #     tokens.append(self.scan_variable())
-            #     continue
+
+                if ch == TokenType.DOLLAR.value:
+                    tokens.extend(self.scan_variable())
+                    continue            
+                if ch == TokenType.DOT.value:
+                    tokens.extend(self.handle_accessor())
+                    continue
+                if self._is_identifier_begin(ch):
+                    tokens.append(self.handle_identifier())
+                    continue
+                if ch == STRING_QUOTE: # Handle Strings
+                    tokens.append(self.scan_string())
+                    continue
+                if ch.isdigit() or (ch=='-' and self._peek().isdigit()):
+                    # Handles Integers/Floats/Exponents
+                    tokens.append(self.scan_number())
+                    continue
                 
-            # if self._is_identifier_begin(ch): # Handle Identifiers and Keywords
-            #     tokens.append(self.scan_identifier_or_keywords(ch))
-            
-            # if token := self.scan_operator_or_punct(ch):
-            #     tokens.append(token)
-            #     continue
+                # TODO: scan_operators_or_punctutations in code
+                # if token := self.scan_operator_or_punct(ch):
+                #     tokens.append(token)
+                #     continue
 
-            self._advance()
+                self._advance()
 
-        print(f"Total Tokens: {tokens}")
-        return tokens
+            print(f"Total Tokens: {tokens}")
+            return tokens
+        except Exception as excp:
+            raise LexerError(
+                "Error during lexical analysis",
+                line=self.line,col=self.col
+            ) from excp
+        finally:
+            self.cleanup()
     
     ###### Helpers ######
 
@@ -143,7 +158,7 @@ class Lexer:
     
     ###### Handles ######
 
-    def handle_accessor(self) -> list:
+    def handle_accessor(self) -> list[TokenType]:
         """ return two token_type for .first_name """
 
         str_buffer,ret_tokens=([],[])
@@ -166,7 +181,7 @@ class Lexer:
             str_buffer.append(self.current)
             self._advance()
         value= ''.join(str_buffer)
-        return self._create_token(TokenType.ACCESSOR_IDENTIFIER,value)
+        return self._create_token(TokenType.IDENTIFIER,value)
 
     def skip_comments(self) -> None:
         """ Skips line with comments """
@@ -175,7 +190,7 @@ class Lexer:
                 break
             self._advance()
 
-    def scan_string(self) -> str:
+    def scan_string(self) -> TokenType:
         """ Scans for a string and returns a string Token """
         ret: list = []
         self._advance() # Start String Scanning
@@ -213,7 +228,7 @@ class Lexer:
             line=self.line,col=self.col
         )
     
-    def scan_number(self) -> str:
+    def scan_number(self) -> TokenType:
         start_idx = self.current_idx
 
         # Consume leading '-' if present
@@ -255,73 +270,74 @@ class Lexer:
 
         return self._create_token(TokenType.NUMBER, value)
 
-    # def scan_variable(self) -> TokenType:
+    def scan_variable(self) -> list[TokenType]:
+        """ Scan of JQ variables: $varName234 """
+        ret = [self._create_token(TokenType.DOLLAR)]
 
-    #     if not self._is_identifier_begin(self._peek()):
-    #         raise LexerError(
-    #             msg=f"Invalid variable name start - [{self._peek()}]", 
-    #             line=self.line, col=self.col
-    #         )
-        
-    #     buf = []
-    #     while (
-    #         self.current_idx <= self.program_size 
-    #         and self._is_ident(self._peek())
-    #     ):
-    #         buf.append(self._advance())
-        
-    #     name = ''.join(buf)
-    #     return self._create_token(TokenType.VARIABLE, name)
+        self._advance()
+        if not self._is_identifier_begin(self.current):
+            raise LexerError(
+                msg=f"Invalid variable name start - [{self.current}]", 
+                line=self.line, col=self.col
+            )
+
+        buf = []
+        while self._is_identifier(self.current):
+            buf.append(self.current)
+            self._advance()
+        name = ''.join(buf)
+
+        ret.append(self._create_token(TokenType.VARIABLE, name))
+        return ret
     
-    # def scan_identifier_or_keywords(self, first: str) -> Token:
-    #     buf = [first]
-
-    #     while (
-    #         self.current_idx <= self.program_size
-    #         and self._is_ident(self._peek())
-    #     ):
-    #         buf.append(self._advance())
-        
-    #     text = ''.join(buf)
-
-    #     ttype = KEYWORDS_MAPPING.get(text)
-    #     if ttype is None:
-    #         return self._create_token(TokenType.IDENTIFIER, text)
-    #     else:
-    #         # TODO: Attach semantic value for literals
-    #         if ttype is TokenType.NULL:
-    #             return self._create_token(TokenType.NULL, None)
-    #         if ttype is TokenType.TRUE:
-    #             return self._create_token(TokenType.TRUE, True)
-    #         if ttype is TokenType.FALSE:
-    #             return self._create_token(TokenType.FALSE, False)
-            
-    #         return self._create_token(ttype, text)
-    
-    # def _match(self, expected: str) -> bool:
-    #     if (
-    #         self.current_idx < self.program_size 
-    #         and self.program[self.current_idx] == expected
-    #     ):
-    #         self.current_idx += 1
-    #         self.col += 1
-    #         return True
-    #     return False
-
     # def scan_operator_or_punct(self, c:str) -> Token | None:
-        if c == '/':
-            if self._match('/'):
-                return self._create_token(TokenType.ALT, '//')
-            return self._create_token(TokenType.SLASH, '/')
-        if c == '=' and self._match('='):
-            return self._create_token(TokenType.EQ, '==')
-        if c == '!' and self._match('='):
-            return self._create_token(TokenType.NEQ, '!=')
-        if c == '<':
-            if self._match('='):
-                return self._create_token(TokenType.LTE, '<=')
-            return self._create_token(TokenType.LT, '<')
-        if c == '>':
-            if self._match('='):
-                return self._create_token(TokenType.GTE, '>=')
-            return self._create_token(TokenType.GT, '>')
+    #     if c == '/':
+    #         if self._match('/'):
+    #             return self._create_token(TokenType.ALT, '//')
+    #         return self._create_token(TokenType.SLASH, '/')
+    #     if c == '=' and self._match('='):
+    #         return self._create_token(TokenType.EQ, '==')
+    #     if c == '!' and self._match('='):
+    #         return self._create_token(TokenType.NEQ, '!=')
+    #     if c == '<':
+    #         if self._match('='):
+    #             return self._create_token(TokenType.LTE, '<=')
+    #         return self._create_token(TokenType.LT, '<')
+    #     if c == '>':
+    #         if self._match('='):
+    #             return self._create_token(TokenType.GTE, '>=')
+    #         return self._create_token(TokenType.GT, '>')
+
+    def handle_brackets(self) -> list:
+        """
+        Recurive lexer to make things easier for parser.
+        Returns:
+            result (list): List of Tokens in format:
+                [TokenType.RSQRBRC,list[Tokens],TokenType.LSQRBRC]
+        """
+        result: list = []
+        if self.current not in OPENING_BRACKETS:
+            LexerError(
+                msg="Mismatching Brackets",
+                line=self.line,col=self.col
+            )
+
+        stack: list = []
+        start_idx: int = self.current_idx
+        while not self._is_end():
+            if self.current in OPENING_BRACKETS:
+                stack.append(self._create_token(OPENING_BRACKETS[self.current]))
+                self._advance()
+            if self.current in CLOSING_BRACKETS:
+                result.append(stack.pop())
+                
+                # Recursive call
+                sub_program = self.program[start_idx:self.current_idx]
+                lexer = Lexer(sub_program)
+                result.append(lexer.tokenize())
+                
+                result.append(self._create_token(CLOSING_BRACKETS[self.current]))
+                self._advance()
+            self._advance()
+        
+        return result

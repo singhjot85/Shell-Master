@@ -10,15 +10,16 @@ class TokenType(Enum):
     STRING = "STRING"
 
     # Identifiers
-    IDENTIFIER = "IDENTIFIER"
-    VARIABLE = "VARIABLE"
-    ACCESSOR_IDENTIFIER = "ACCESSOR_IDENTIFIER"
+    IDENTIFIER = "IDENTIFIER" # firstName
+    VARIABLE = "VARIABLE" # $firstName
+    ACCESSOR_IDENTIFIER = "ACCESSOR_IDENTIFIER" # .firstName
 
     # Operators & punctuation
     DOT = "."
     COMMA = ","
     COLON = ":"
     PIPE = "|"
+    DOLLAR = '$'
 
     PLUS = "+"
     MINUS = "-"
@@ -47,8 +48,10 @@ class TokenType(Enum):
     IF = "if"
     THEN = "then"
     ELSE = "else"
-    ELIL= "elif"
+    ELIL = "elif"
     END = "end"
+
+    AS = "as"
 
     AND = "and"
     OR = "or"
@@ -73,25 +76,31 @@ STRING_MAPPING= {
     't':'\t'
 }
 
-BRACKETS = {
-    "(": TokenType.LPAREN,
-    ")": TokenType.RPAREN,
-    "[": TokenType.LSQRBRC,
-    "]": TokenType.RSQRBRC,
-    "{": TokenType.LCURLBRC,
-    "}": TokenType.RCURLBRC,
+OPENING_BRACKETS = {
+    str(TokenType.LPAREN.value): TokenType.LPAREN,
+    str(TokenType.LSQRBRC.value): TokenType.LSQRBRC,
+    str(TokenType.LCURLBRC.value): TokenType.LCURLBRC,
 }
 
+CLOSING_BRACKETS = {
+    str(TokenType.RPAREN.value): TokenType.RPAREN,
+    str(TokenType.RSQRBRC.value): TokenType.RSQRBRC,
+    str(TokenType.RCURLBRC.value): TokenType.RCURLBRC,
+}
+
+
 KEYWORDS_MAPPING = {
-    TokenType.IF.value: TokenType.IF,
+    TokenType.AS.value: TokenType.AS,
     TokenType.OR.value: TokenType.OR,
-    TokenType.END.value: TokenType.END,
     TokenType.AND.value: TokenType.AND,
     TokenType.NOT.value: TokenType.NOT,
+    TokenType.IF.value: TokenType.IF,
+    TokenType.ELSE.value: TokenType.ELSE,
+    TokenType.ELIL.value: TokenType.ELIL,
+    TokenType.THEN.value: TokenType.THEN,
+    TokenType.END.value: TokenType.END,
     TokenType.NULL.value: TokenType.NULL,
     TokenType.TRUE.value: TokenType.TRUE,
-    TokenType.THEN.value: TokenType.THEN,
-    TokenType.ELSE.value: TokenType.ELSE,
     TokenType.FALSE.value: TokenType.FALSE
 }
 
