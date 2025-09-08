@@ -82,22 +82,19 @@ class Lexer:
                     tokens.append(self.scan_number())
                     continue
                 
-                # TODO: scan_operators_or_punctutations in code
+                # TODO: scan_operators_or_punctutations in JQ program
                 # if token := self.scan_operator_or_punct(ch):
                 #     tokens.append(token)
                 #     continue
 
                 self._advance()
 
-            print(f"Total Tokens: {tokens}")
             return tokens
         except Exception as excp:
             raise LexerError(
                 "Error during lexical analysis",
                 line=self.line,col=self.col
             ) from excp
-        finally:
-            self.cleanup()
     
     ###### Helpers ######
 
@@ -308,6 +305,19 @@ class Lexer:
     #             return self._create_token(TokenType.GTE, '>=')
     #         return self._create_token(TokenType.GT, '>')
 
+    def _peep_stack_top(self, stack: list = []) -> list[tuple[Token,int]] | None:
+        """ Special peep method to peep JQ lexer stack """
+        top = None
+
+        if stack[-1] and isinstance(stack[-1], tuple):
+            top = stack[-1]
+        elif isinstance(stack[-1], list):
+            for item in reversed(stack):
+                if isinstance(item, tuple):
+                    top = item
+
+        return top        
+    
     def handle_brackets(self) -> list:
         """
         Recurive lexer to make things easier for parser.
@@ -322,22 +332,50 @@ class Lexer:
                 line=self.line,col=self.col
             )
 
-        stack: list = []
+        stack: list[tuple[Token,int]] = []
         start_idx: int = self.current_idx
         while not self._is_end():
             if self.current in OPENING_BRACKETS:
-                stack.append(self._create_token(OPENING_BRACKETS[self.current]))
+                if stack:
+                    prev_start_idx = self._peep_stack_top()[1]
+                    sub_program = self.program[prev_start_idx:self.current_idx]
+                    lexer = Lexer(sub_program)
+                    stack.append(lexer.tokenize())
+                stack.append(
+                    (self._create_token(OPENING_BRACKETS[self.current]), start_idx)
+                )
                 self._advance()
+                continue
             if self.current in CLOSING_BRACKETS:
-                result.append(stack.pop())
+
+                stack_top: int = self._peep_stack_top()
+
+                if stack[-1] and isinstance(stack[-1],tuple):
+                    result.append(stack_top[1])
+                elif isinstance(stack[-1],list):
+                    result.append(stack_top[1])
+                    if stack[-1]:
+                        result.append(stack.pop()[0])
+                else:
+                    self._advance()
+                    continue
                 
+                prev_start_idx = stack_top[1]
+                if prev_start_idx is None:
+                    LexerError(
+                        msg="Error occurred in recursion",
+                        line=self.line, col=self.col
+                    )
+
                 # Recursive call
-                sub_program = self.program[start_idx:self.current_idx]
+                sub_program = self.program[prev_start_idx:self.current_idx]
                 lexer = Lexer(sub_program)
                 result.append(lexer.tokenize())
+                del lexer # Will this increase processing time??
                 
                 result.append(self._create_token(CLOSING_BRACKETS[self.current]))
                 self._advance()
+                continue
             self._advance()
         
         return result
