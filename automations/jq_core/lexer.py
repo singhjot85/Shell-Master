@@ -23,25 +23,24 @@ class Lexer:
         self.current: str = self.program[0] if self.program else None
         self.current_idx: int = 0
         self.line: int = 0
-        self.col: int = 0
-
-        print(f"Lexical Analyzer initialized program_size:{self.program_size}")
+        self.col: int = 0 
 
     def tokenize(self) -> list[TokenType] | None:
         """ Return a list of valid JQ tokens given a string of JQ program"""
         try:
             tokens :list[Token] = []
 
-            while not self._is_end():
+            while not self._is_end() and self.current:
                 ch = self.current
-                if not ch:
-                    break
 
-                # Not required (Can be made flag enabled if required in future).
-                # if ch in WHITE_SPACES:
-                #     continue
-                if ch in NEW_LINES:
+                # Only for optimization
+                if self.current in WHITE_SPACES:
+                    self._advance()
+                    continue
+                if ch in NEW_LINES:                    
                     self._line_break()
+                    self._advance()
+                    continue
                 if ch == COMMENT_HASH: # Skip comments as of now
                     # TODO: handle Comments
                     self.skip_comments()
@@ -49,14 +48,8 @@ class Lexer:
 
                 if ch in KEYWORDS_MAPPING:
                     tokens.append(self._create_token(KEYWORDS_MAPPING[ch]))
-                if (
-                    ch in OPENING_BRACKETS 
-                    or ch in CLOSING_BRACKETS
-                ):
-                    # TODO: Handle brackets to recursively tokenize nested JQ's
-                    # [...<T1>,<T2>,<T3>,[<T1>,<T2>]<T5>...]
+                if ch in OPENING_BRACKETS:
                     tokens.extend(self.handle_brackets())
-                    # tokens.append(self._create_token(BRACKETS[ch]))
                 if ch == TokenType.COMMA.value:
                     tokens.append(self._create_token(TokenType.COMMA))
                 if ch == TokenType.COLON.value:
@@ -86,15 +79,18 @@ class Lexer:
                 # if token := self.scan_operator_or_punct(ch):
                 #     tokens.append(token)
                 #     continue
+                if self.current in CLOSING_BRACKETS:
+                    LexerError(msg="Imbalanced Brackets", line=self.line, col=self.col)
 
                 self._advance()
-
+            print(
+                "tokens in current analysis: ", 
+                self.program," >>> ", 
+                tokens 
+            )
             return tokens
         except Exception as excp:
-            raise LexerError(
-                "Error during lexical analysis",
-                line=self.line,col=self.col
-            ) from excp
+            raise LexerError(msg="Error during lexical analysis", line=self.line, col=self.col ) from excp
     
     ###### Helpers ######
 
@@ -178,7 +174,7 @@ class Lexer:
             str_buffer.append(self.current)
             self._advance()
         value= ''.join(str_buffer)
-        return self._create_token(TokenType.IDENTIFIER,value)
+        return self._create_token(TokenType.IDENTIFIER, value)
 
     def skip_comments(self) -> None:
         """ Skips line with comments """
@@ -287,6 +283,112 @@ class Lexer:
         ret.append(self._create_token(TokenType.VARIABLE, name))
         return ret
     
+    def _peep_last_tuple(self, stack: list = []) -> list[tuple[Token,int]] | None:
+        """ Special peep method to peep JQ lexer stack """
+        top_tuple = None
+
+        if stack[-1] and isinstance(stack[-1], tuple):
+            top_tuple = stack[-1]
+        elif isinstance(stack[-1], list):
+            for item in reversed(stack):
+                if isinstance(item, tuple):
+                    top_tuple = item
+
+        return top_tuple
+    
+    def _is_same_set(self, key: str) -> bool:
+        """ Return if the key(given) and self.current are of same set """
+        if not key:
+            return False
+        
+        if key in OPENING_BRACKETS:
+            if key == TokenType.LPAREN.value:
+                return self.current == TokenType.RPAREN.value
+            if key == TokenType.LSQRBRC.value:
+                return self.current == TokenType.RSQRBRC.value
+            if key == TokenType.LCURLBRC.value:
+                return self.current == TokenType.RCURLBRC.value
+        if key in CLOSING_BRACKETS:
+            if key == TokenType.RPAREN.value:
+                return self.current == TokenType.LPAREN.value
+            if key == TokenType.RSQRBRC.value:
+                return self.current == TokenType.LSQRBRC.value
+            if key == TokenType.RCURLBRC.value:
+                return self.current == TokenType.LCURLBRC.value
+
+        return False
+    
+    def _lexit(self, start_idx:int) -> list[TokenType]:
+        """ Lexical Analyze a given program, start index is required. """
+        sub_program = self.program[start_idx:self.current_idx]
+        lexer: Lexer = Lexer(sub_program)
+        sub_tokens: list[TokenType] = lexer.tokenize()
+        del lexer
+        return sub_tokens
+
+    def handle_brackets(self) -> list:
+        """
+        Recurive lexer to make things easier for parser.
+        Returns:
+            result (list): List of Tokens in format:
+                [TokenType.RSQRBRC,list[Tokens],TokenType.LSQRBRC]
+        """
+        if self.current not in OPENING_BRACKETS:
+            LexerError(
+                msg="Mismatching Brackets",
+                line=self.line,col=self.col
+            )
+
+        stack: list[tuple[Token,int]] | list[list] | int= []
+        while not self._is_end():
+            if self.current in OPENING_BRACKETS:
+                if stack:
+                    if not isinstance(stack[-1], int):
+                        prev_start_idx = self._peep_last_tuple(stack)[1] + 1
+                    else:
+                        prev_start_idx = stack.pop()
+                    if prev_start_idx is None:
+                        raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
+                    if tokens:=self._lexit(prev_start_idx):
+                        stack.append(tokens)
+
+                stack.append((self._create_token(
+                    OPENING_BRACKETS[self.current]), 
+                    self.current_idx
+                ))
+                self._advance()
+                continue
+            if self.current in CLOSING_BRACKETS:
+                top_tuple: tuple[Token,int] = self._peep_last_tuple(stack)
+                if (
+                    not self._is_same_set(top_tuple[0].value)
+                    or not top_tuple
+                ):
+                    LexerError(msg="Imbalanced Brackets", line=self.line, col=self.col)
+                
+                prev_start_idx = top_tuple[1] + 1
+                if prev_start_idx is None:
+                    raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
+                if tokens:=self._lexit(prev_start_idx):
+                    stack.append(tokens)
+                
+                temp_list: list[Token | list]= []
+                while stack[-1] and not isinstance(stack[-1], tuple):
+                    temp_list.extend(stack.pop())
+                stack.append([
+                    stack.pop()[0], # Openeing bracket
+                    temp_list, # Sub Program
+                    self._create_token(CLOSING_BRACKETS[self.current]) # Closing bracket
+                ])
+                if self.current_idx + 1 < self.program_size:
+                    stack.append(self.current_idx + 1)
+
+                self._advance()
+                continue
+            self._advance() # Just a safety check
+        
+        return stack
+    
     # def scan_operator_or_punct(self, c:str) -> Token | None:
     #     if c == '/':
     #         if self._match('/'):
@@ -304,78 +406,3 @@ class Lexer:
     #         if self._match('='):
     #             return self._create_token(TokenType.GTE, '>=')
     #         return self._create_token(TokenType.GT, '>')
-
-    def _peep_stack_top(self, stack: list = []) -> list[tuple[Token,int]] | None:
-        """ Special peep method to peep JQ lexer stack """
-        top = None
-
-        if stack[-1] and isinstance(stack[-1], tuple):
-            top = stack[-1]
-        elif isinstance(stack[-1], list):
-            for item in reversed(stack):
-                if isinstance(item, tuple):
-                    top = item
-
-        return top        
-    
-    def handle_brackets(self) -> list:
-        """
-        Recurive lexer to make things easier for parser.
-        Returns:
-            result (list): List of Tokens in format:
-                [TokenType.RSQRBRC,list[Tokens],TokenType.LSQRBRC]
-        """
-        result: list = []
-        if self.current not in OPENING_BRACKETS:
-            LexerError(
-                msg="Mismatching Brackets",
-                line=self.line,col=self.col
-            )
-
-        stack: list[tuple[Token,int]] = []
-        start_idx: int = self.current_idx
-        while not self._is_end():
-            if self.current in OPENING_BRACKETS:
-                if stack:
-                    prev_start_idx = self._peep_stack_top()[1]
-                    sub_program = self.program[prev_start_idx:self.current_idx]
-                    lexer = Lexer(sub_program)
-                    stack.append(lexer.tokenize())
-                stack.append(
-                    (self._create_token(OPENING_BRACKETS[self.current]), start_idx)
-                )
-                self._advance()
-                continue
-            if self.current in CLOSING_BRACKETS:
-
-                stack_top: int = self._peep_stack_top()
-
-                if stack[-1] and isinstance(stack[-1],tuple):
-                    result.append(stack_top[1])
-                elif isinstance(stack[-1],list):
-                    result.append(stack_top[1])
-                    if stack[-1]:
-                        result.append(stack.pop()[0])
-                else:
-                    self._advance()
-                    continue
-                
-                prev_start_idx = stack_top[1]
-                if prev_start_idx is None:
-                    LexerError(
-                        msg="Error occurred in recursion",
-                        line=self.line, col=self.col
-                    )
-
-                # Recursive call
-                sub_program = self.program[prev_start_idx:self.current_idx]
-                lexer = Lexer(sub_program)
-                result.append(lexer.tokenize())
-                del lexer # Will this increase processing time??
-                
-                result.append(self._create_token(CLOSING_BRACKETS[self.current]))
-                self._advance()
-                continue
-            self._advance()
-        
-        return result
