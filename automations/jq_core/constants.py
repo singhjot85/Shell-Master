@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 class TokenType(Enum):
     # Literals
-    NULL = "NULL"
+    NULL = "null"
     TRUE = "TRUE"
     FALSE = "FALSE"
     NUMBER = "NUMBER"
@@ -102,6 +102,19 @@ KEYWORDS_MAPPING = {
     TokenType.NULL.value: TokenType.NULL,
     TokenType.TRUE.value: TokenType.TRUE,
     TokenType.FALSE.value: TokenType.FALSE
+}
+
+DEFAULT_IDENTIFIERS = {
+    TokenType.IF.value: TokenType.IF,
+    TokenType.THEN.value: TokenType.THEN,
+    TokenType.ELIL.value: TokenType.ELIL,
+    TokenType.ELSE.value: TokenType.ELSE,
+    TokenType.END.value: TokenType.END,
+    TokenType.AS.value: TokenType.AS,
+    TokenType.AND.value: TokenType.AND,
+    TokenType.OR.value: TokenType.OR,
+    TokenType.NOT.value: TokenType.NOT,
+    TokenType.NULL.value: TokenType.NULL
 }
 
 @dataclass

@@ -1,7 +1,4 @@
-""" Pytests to insure Lexer stays intact """
-from automations.jq_core.lexer import Lexer
 from automations.jq_core.constants import TokenType, Token
-
 
 def create_token(ttype: TokenType, value=None) -> Token:
     """ Create a token given a token_type and value """
@@ -12,11 +9,12 @@ def create_token(ttype: TokenType, value=None) -> Token:
         token = Token(ttype, value, 0, 0)
     return token
 
+# Type 1
 TESTCASES_1 = '.first_name \n .last_name'
 TESTCASES_2 = ','
 TESTCASES_3 = '.'
 TESTCASES_4 = '|'
-TESTCASES_5 = '$'
+TESTCASES_5 = '$SomeName'
 TESTCASES_6 = 'firstName: "Hello",'
 TESTCASES_7 = '_last_name: "World",'
 TESTCASES_8 = 'int: 123,'
@@ -25,12 +23,16 @@ TESTCASES_10 = 'exp: 234e4,'
 TESTCASES_11 = 'negative: -235e4,'
 TESTCASES_12 = 'money: $bankBalance,'
 TESTCASES_13 = 'if .a then .b else .c end'
+
+# Type-1 SpecialCases
+
+# Type 2
 TESTCASES_14 = '.first_name[] | { }'
 TESTCASES_15 = '.last_name[ if .name | select(.key) then .pmt end ] | { }'
 TESTCASES_16 = '("2445") as $bankBalance1 | '
 TESTCASES_17 = '.first_name[] | { firstName: "Hello", }'
 
-TESTCASE_RESULTS = {
+TESTCASE_RESULTS_TYPE_1 = {
     TESTCASES_1: [
         create_token(TokenType.DOT),
         create_token(TokenType.ACCESSOR_IDENTIFIER, "first_name"),
@@ -40,7 +42,10 @@ TESTCASE_RESULTS = {
     TESTCASES_2: [create_token(TokenType.COMMA)],
     TESTCASES_3: [create_token(TokenType.DOT)],
     TESTCASES_4: [create_token(TokenType.PIPE)],
-    TESTCASES_5: [create_token(TokenType.DOLLAR)],
+    TESTCASES_5: [
+        create_token(TokenType.DOLLAR),
+        create_token(TokenType.VARIABLE, "SomeName")
+    ],
     TESTCASES_6: [
         create_token(TokenType.IDENTIFIER, "firstName"),
         create_token(TokenType.COLON),
@@ -80,6 +85,7 @@ TESTCASE_RESULTS = {
     TESTCASES_12: [
         create_token(TokenType.IDENTIFIER, "money"),
         create_token(TokenType.COLON),
+        create_token(TokenType.DOLLAR),
         create_token(TokenType.VARIABLE, "bankBalance"),
         create_token(TokenType.COMMA),
     ],
@@ -95,6 +101,9 @@ TESTCASE_RESULTS = {
         create_token(TokenType.ACCESSOR_IDENTIFIER, 'c'),
         create_token(TokenType.END)
     ],
+}
+
+TESTCASE_RESULTS_TYPE_2 ={
     TESTCASES_14: [
         create_token(TokenType.DOT),
         create_token(TokenType.ACCESSOR_IDENTIFIER, 'first_name'),
@@ -149,13 +158,4 @@ TESTCASE_RESULTS = {
         create_token(TokenType.RCURLBRC)
     ],
 }
-class TestBasicLexing:
     
-    def test_operators(self):
-        for program in TESTCASE_RESULTS:
-            tokens = Lexer(program).tokenize()
-
-            assert isinstance(tokens, list) == True
-            assert len(tokens) == len(TESTCASE_RESULTS[program])
-            assert tokens == TESTCASE_RESULTS[program]
-        

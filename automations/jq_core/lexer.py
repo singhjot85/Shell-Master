@@ -8,7 +8,8 @@ from .constants import (
     COMMENT_HASH,
     STRING_QUOTE,
     CLOSING_BRACKETS,
-    OPENING_BRACKETS
+    OPENING_BRACKETS,
+    DEFAULT_IDENTIFIERS
 )
 
 class Lexer:
@@ -76,18 +77,11 @@ class Lexer:
                     continue
                 
                 # TODO: scan_operators_or_punctutations in JQ program
-                # if token := self.scan_operator_or_punct(ch):
-                #     tokens.append(token)
-                #     continue
+
                 if self.current in CLOSING_BRACKETS:
                     LexerError(msg="Imbalanced Brackets", line=self.line, col=self.col)
 
                 self._advance()
-            print(
-                "tokens in current analysis: ", 
-                self.program," >>> ", 
-                tokens 
-            )
             return tokens
         except Exception as excp:
             raise LexerError(msg="Error during lexical analysis", line=self.line, col=self.col ) from excp
@@ -132,14 +126,7 @@ class Lexer:
             return self.program[self.current_idx + 1]
         else:
             return None
-    
-    def _peek_peek(self) -> str:
-        """ returns next to next character does not move the pointer """
-        if self.current_idx + 2 < self.program_size:
-            return self.program[self.current_idx + 2]
-        else:
-            return None
-    
+     
     def _create_token(self, ttype: TokenType, value=None) -> Token:
         """ Create a token given a token_type and value """
         token = None
@@ -154,7 +141,7 @@ class Lexer:
     def handle_accessor(self) -> list[TokenType]:
         """ return two token_type for .first_name """
 
-        str_buffer,ret_tokens=([],[])
+        str_buffer, ret_tokens=([],[])
 
         ret_tokens.append(self._create_token(TokenType.DOT))
         self._advance()
@@ -162,9 +149,10 @@ class Lexer:
         while self._is_identifier(self.current):
             str_buffer.append(self.current)
             self._advance()
-        value= ''.join(str_buffer)
-
-        ret_tokens.append(self._create_token(TokenType.ACCESSOR_IDENTIFIER,value))
+        
+        if str_buffer:
+            value= ''.join(str_buffer)
+            ret_tokens.append(self._create_token(TokenType.ACCESSOR_IDENTIFIER,value))
         return ret_tokens
     
     def handle_identifier(self) -> TokenType:
@@ -173,7 +161,11 @@ class Lexer:
         while self._is_identifier(self.current):
             str_buffer.append(self.current)
             self._advance()
+            
         value= ''.join(str_buffer)
+        if value in DEFAULT_IDENTIFIERS:
+            return self._create_token(DEFAULT_IDENTIFIERS[value])
+
         return self._create_token(TokenType.IDENTIFIER, value)
 
     def skip_comments(self) -> None:
@@ -386,13 +378,11 @@ class Lexer:
                 closing_brac.append(self._create_token(CLOSING_BRACKETS[self.current]))
                 stack.append(closing_brac)
 
-                if self.current_idx + 1 < self.program_size:
-                    x: int = self.current_idx + 1
-                    stack.append(x)
+                # e
 
                 self._advance()
                 continue
-            self._advance() # Just a safety check
+            self._advance()
         
         return stack
     
