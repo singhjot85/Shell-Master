@@ -289,7 +289,7 @@ class Lexer:
 
         if stack[-1] and isinstance(stack[-1], tuple):
             top_tuple = stack[-1]
-        elif isinstance(stack[-1], list):
+        else:
             for item in reversed(stack):
                 if isinstance(item, tuple):
                     top_tuple = item
@@ -347,15 +347,18 @@ class Lexer:
                         prev_start_idx = self._peep_last_tuple(stack)[1] + 1
                     else:
                         prev_start_idx = stack.pop()
+                        
                     if prev_start_idx is None:
                         raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
                     if tokens:=self._lexit(prev_start_idx):
+                        tokens: list[TokenType]
                         stack.append(tokens)
 
-                stack.append((self._create_token(
-                    OPENING_BRACKETS[self.current]), 
+                opening_brac: tuple[TokenType, int] = (
+                    self._create_token(OPENING_BRACKETS[self.current]), 
                     self.current_idx
-                ))
+                )
+                stack.append(opening_brac)
                 self._advance()
                 continue
             if self.current in CLOSING_BRACKETS:
@@ -370,18 +373,22 @@ class Lexer:
                 if prev_start_idx is None:
                     raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
                 if tokens:=self._lexit(prev_start_idx):
+                    tokens: list[TokenType]
                     stack.append(tokens)
                 
                 temp_list: list[Token | list]= []
                 while stack[-1] and not isinstance(stack[-1], tuple):
                     temp_list.extend(stack.pop())
-                stack.append([
-                    stack.pop()[0], # Openeing bracket
-                    temp_list, # Sub Program
-                    self._create_token(CLOSING_BRACKETS[self.current]) # Closing bracket
-                ])
+                
+                closing_brac = [stack.pop()[0]]
+                if temp_list:
+                    closing_brac.append(temp_list)
+                closing_brac.append(self._create_token(CLOSING_BRACKETS[self.current]))
+                stack.append(closing_brac)
+
                 if self.current_idx + 1 < self.program_size:
-                    stack.append(self.current_idx + 1)
+                    x: int = self.current_idx + 1
+                    stack.append(x)
 
                 self._advance()
                 continue
