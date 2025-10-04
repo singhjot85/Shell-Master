@@ -18,8 +18,10 @@ class TokenType(Enum):
     DOT = "."
     COMMA = ","
     COLON = ":"
+    SEMI_COLON = ";"
     PIPE = "|"
     DOLLAR = '$'
+    ASTRICk = "*"
 
     PLUS = "+"
     MINUS = "-"
@@ -35,6 +37,14 @@ class TokenType(Enum):
     GTE = ">="
     ALT = "//"
     SLASH = '/'
+    QUESTION_MARK = '?'
+
+    # Compound assignment (modifies field in place)
+    PLUS_EQUL = "+="
+    MINUS_EQUAL = "-=" 
+    MULT_EQUAL = "*=" 
+    DIV_EQUAL = "/="
+
 
     # Brackets
     LPAREN = "("
@@ -50,6 +60,16 @@ class TokenType(Enum):
     ELSE = "else"
     ELIL = "elif"
     END = "end"
+    TRY = "try"
+    CATCH = "catch"
+    LABEL = "label"
+    REDUCE = "reduce"
+    FOREACH = "foreach"
+    WHILE = "while"
+    UNTIL = "until"
+    BREAK = "break"
+    
+    DEF = "def"
 
     AS = "as"
 
@@ -59,6 +79,16 @@ class TokenType(Enum):
 
     # Miscs
     EOF = "EOF"
+
+@dataclass
+class Token:
+    type: TokenType
+    value: str | float | None
+    line: int
+    col: int
+
+    def __repr__(self):
+        return f"<Token {self.type} - '{self.value}'>"
 
 WHITE_SPACES = [' ', '\t', '\r']
 NEW_LINES = ['\n']
@@ -88,7 +118,6 @@ CLOSING_BRACKETS = {
     str(TokenType.RCURLBRC.value): TokenType.RCURLBRC,
 }
 
-
 KEYWORDS_MAPPING = {
     TokenType.AS.value: TokenType.AS,
     TokenType.OR.value: TokenType.OR,
@@ -114,15 +143,40 @@ DEFAULT_IDENTIFIERS = {
     TokenType.AND.value: TokenType.AND,
     TokenType.OR.value: TokenType.OR,
     TokenType.NOT.value: TokenType.NOT,
-    TokenType.NULL.value: TokenType.NULL
+    TokenType.NULL.value: TokenType.NULL,
+    TokenType.TRY.value: TokenType.TRY,
+    TokenType.CATCH.value: TokenType.CATCH,
+    TokenType.LABEL.value: TokenType.LABEL,
+    TokenType.REDUCE.value: TokenType.REDUCE,
+    TokenType.FOREACH.value: TokenType.FOREACH,
+    TokenType.WHILE.value: TokenType.WHILE,
+    TokenType.UNTIL.value: TokenType.UNTIL, 
+    TokenType.BREAK.value: TokenType.BREAK,
+    TokenType.DEF.value: TokenType.DEF
 }
 
-@dataclass
-class Token:
-    type: TokenType
-    value: str | float | None
-    line: int
-    col: int
-
-    def __repr__(self):
-        return f"<Token {self.type} - '{self.value}'>"
+OPERATORS = {
+    TokenType.COLON.value: TokenType.COLON,
+    TokenType.COMMA.value: TokenType.COMMA,
+    TokenType.SEMI_COLON.value: TokenType.SEMI_COLON,
+    TokenType.PIPE.value: TokenType.PIPE,
+    TokenType.ASTRICk.value: TokenType.ASTRICk,
+    TokenType.PLUS.value: TokenType.PLUS,
+    TokenType.MINUS.value: TokenType.MINUS,
+    TokenType.MULT.value: TokenType.MULT,
+    TokenType.DIV.value: TokenType.DIV,
+    TokenType.MOD.value: TokenType.MOD,
+    TokenType.LT.value: TokenType.LT,
+    TokenType.GT.value: TokenType.GT,
+    TokenType.EQ.value: TokenType.EQ,
+    TokenType.NEQ.value: TokenType.NEQ,
+    TokenType.LTE.value: TokenType.LTE,
+    TokenType.GTE.value: TokenType.GTE,
+    TokenType.ALT.value: TokenType.ALT,
+    TokenType.SLASH.value: TokenType.SLASH,
+    TokenType.QUESTION_MARK.value: TokenType.QUESTION_MARK,
+    TokenType.PLUS_EQUL.value: TokenType.PLUS_EQUL,
+    TokenType.MINUS_EQUAL.value: TokenType.MINUS_EQUAL,
+    TokenType.MULT_EQUAL.value: TokenType.MULT_EQUAL,
+    TokenType.DIV_EQUAL.value: TokenType.DIV_EQUAL,
+}

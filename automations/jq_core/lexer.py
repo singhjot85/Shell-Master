@@ -9,7 +9,8 @@ from .constants import (
     STRING_QUOTE,
     CLOSING_BRACKETS,
     OPENING_BRACKETS,
-    DEFAULT_IDENTIFIERS
+    DEFAULT_IDENTIFIERS,
+    OPERATORS
 )
 
 class Lexer:
@@ -42,22 +43,10 @@ class Lexer:
                     self._line_break()
                     self._advance()
                     continue
-                if ch == COMMENT_HASH: # Skip comments as of now
+                if ch == COMMENT_HASH:
                     # TODO: handle Comments
                     self.skip_comments()
                     continue
-
-                if ch in KEYWORDS_MAPPING:
-                    tokens.append(self._create_token(KEYWORDS_MAPPING[ch]))
-                if ch in OPENING_BRACKETS:
-                    tokens.extend(self.handle_brackets())
-                if ch == TokenType.COMMA.value:
-                    tokens.append(self._create_token(TokenType.COMMA))
-                if ch == TokenType.COLON.value:
-                    tokens.append(self._create_token(TokenType.COLON))
-                if ch == TokenType.PIPE.value:
-                    tokens.append(self._create_token(TokenType.PIPE))
-
 
                 if ch == TokenType.DOLLAR.value:
                     tokens.extend(self.scan_variable())
@@ -75,11 +64,15 @@ class Lexer:
                     # Handles Integers/Floats/Exponents
                     tokens.append(self.scan_number())
                     continue
-                
-                # TODO: scan_operators_or_punctutations in JQ program
 
-                if self.current in CLOSING_BRACKETS:
-                    LexerError(msg="Imbalanced Brackets", line=self.line, col=self.col)
+                if ch in KEYWORDS_MAPPING:
+                    tokens.append(self._create_token(KEYWORDS_MAPPING[ch]))
+                if ch in OPENING_BRACKETS:
+                    tokens.append(self._create_token(OPENING_BRACKETS[ch]))
+                if ch in CLOSING_BRACKETS:
+                    tokens.append(self._create_token(CLOSING_BRACKETS[ch]))
+                if ch in OPERATORS:
+                    tokens.append(self.handle_operators())
 
                 self._advance()
             return tokens
@@ -318,6 +311,32 @@ class Lexer:
         del lexer
         return sub_tokens
 
+    def handle_operators(self):
+        """
+        Handle operators: assignemnt, comparison and some deafults
+        """
+        buf = []
+        if (
+            self.current in OPERATORS
+            and self._peek() in OPERATORS
+        ):
+        # For operators with two chars '+=','-='
+            buf.append(self.current)
+            self._advance()
+            buf.append(self.current)
+            complete_operator = ''.join(buf)
+            return self._create_token(OPERATORS[complete_operator])
+        else:
+            return self._create_token(OPERATORS[self.current])
+
+class LexerExtended(Lexer):
+    """
+    Needs optimization and bug-fixes, can be used for debugger,
+    but not as of now.
+    """
+    def __init__(self, source):
+        super().__init__(source)
+
     def handle_brackets(self) -> list:
         """
         Recurive lexer to make things easier for parser.
@@ -378,28 +397,8 @@ class Lexer:
                 closing_brac.append(self._create_token(CLOSING_BRACKETS[self.current]))
                 stack.append(closing_brac)
 
-                # e
-
                 self._advance()
                 continue
             self._advance()
         
         return stack
-    
-    # def scan_operator_or_punct(self, c:str) -> Token | None:
-    #     if c == '/':
-    #         if self._match('/'):
-    #             return self._create_token(TokenType.ALT, '//')
-    #         return self._create_token(TokenType.SLASH, '/')
-    #     if c == '=' and self._match('='):
-    #         return self._create_token(TokenType.EQ, '==')
-    #     if c == '!' and self._match('='):
-    #         return self._create_token(TokenType.NEQ, '!=')
-    #     if c == '<':
-    #         if self._match('='):
-    #             return self._create_token(TokenType.LTE, '<=')
-    #         return self._create_token(TokenType.LT, '<')
-    #     if c == '>':
-    #         if self._match('='):
-    #             return self._create_token(TokenType.GTE, '>=')
-    #         return self._create_token(TokenType.GT, '>')
