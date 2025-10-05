@@ -1,3 +1,5 @@
+/debuggs/*
+
 # =========================
 # Python
 # =========================
@@ -64,7 +66,6 @@ dmypy.json
 
 # PyCharm / VS Code
 .idea/
-.vscode/
 
 # Local virtualenvs
 venv/
