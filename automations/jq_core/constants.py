@@ -4,8 +4,8 @@ from dataclasses import dataclass
 class TokenType(Enum):
     # Literals
     NULL = "null"
-    TRUE = "TRUE"
-    FALSE = "FALSE"
+    TRUE = "true"
+    FALSE = "false"
     NUMBER = "NUMBER"
     STRING = "STRING"
 

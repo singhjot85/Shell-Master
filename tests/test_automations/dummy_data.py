@@ -1,4 +1,5 @@
 from automations.jq_core.constants import TokenType, Token
+from automations.jq_core.ast import *
 
 def create_token(ttype: TokenType, value=None) -> Token:
     """ Create a token given a token_type and value """
@@ -182,31 +183,26 @@ COMPLETE_PROGRAM_1 = ''''
     }
 )
 '''
-
 COMPLETE_PROGRAM_2 = """
 def addmul(a; b): (a + b) * (a - b);
 ("12") as $input | 
 $input | addmul(5; .value) | {result: ., double: (. * 2)}
 """
-
 COMPLETE_PROGRAM_3 = """
 if .age >= 18 then "adult"
 elif .age >= 13 then "teenager"
 else "child"
 end
 """
-
 COMPLETE_PROGRAM_4 = """
 .people[]
 | select(.active == true)
 | {name, emails: [.contacts[]?.email // "unknown"]}
 """
-
 COMPLETE_PROGRAM_5 = """
 def greet(name): "Hello, \(name)! Today is \(now | strftime("%A")).";
 greet(.username)
 """
-
 COMPLETE_PROGRAM_6 = """
 reduce range(0; 10) as $i (0;
   . + (if ($i % 2 == 0) then $i else 0 end)

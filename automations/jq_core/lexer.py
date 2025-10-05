@@ -27,7 +27,7 @@ class Lexer:
         self.line: int = 0
         self.col: int = 0 
 
-    def tokenize(self) -> list[TokenType] | None:
+    def tokenize(self) -> list[Token] | None:
         """ Return a list of valid JQ tokens given a string of JQ program"""
         try:
             tokens :list[Token] = []
