@@ -13,7 +13,7 @@ def create_token(ttype: TokenType, value=None) -> Token:
 # Type 1
 TESTCASES_1 = '.first_name \n .last_name'
 TESTCASES_2 = ','
-TESTCASES_3 = '.'
+TESTCASES_3 = '.name'
 TESTCASES_4 = '|'
 TESTCASES_5 = '$SomeName'
 TESTCASES_6 = 'firstName: "Hello",'

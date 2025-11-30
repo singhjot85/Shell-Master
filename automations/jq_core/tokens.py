@@ -45,6 +45,7 @@ class Keywords(TokenType):
 
 class Identifiers(TokenType):
     ACCESS_VARIABLE = "access_variable"  # .first_name
+    MAPPING_KEY = "mapping_key" # firstName:
     VARIAVBLE = "variable" # $firstName
     FUNCTION = "function"  # def fisrName: 
 

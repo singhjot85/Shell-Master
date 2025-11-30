@@ -48,6 +48,9 @@ class Lexer:
                 if char == Delimiters.DOUBLE_QOUTES.value:
                     tokens.append(self._scan_string())
                     continue
+                if char == Delimiters.COLON.value:
+                    self._process_keys(tokens)
+                    continue
                 if JQUtils.is_valid_identifier(char, True):
                     tokens.append(self._scan_identifiers())
                     continue
@@ -87,6 +90,20 @@ class Lexer:
         # except JQException as exc:
         except Exception as exc:
             raise exc
+    
+    def _process_keys(self, tokens: list[Token]):
+        if(
+            tokens
+            and tokens[-1]
+            and isinstance(tokens[-1], Token)
+            and tokens[-1].type == "Identifiers"
+            and tokens[-1].value
+        ):
+            tokens[-1].type = Identifiers.MAPPING_KEY.value
+            tokens[-1].value = ''.join([tokens[-1].value, ':'])
+            self.handler.next()
+            return
+        raise Exception("Invalid key name")
 
     def _scan_variable(self) -> Token:
         """Scan of JQ variables: $varName234 
