@@ -1,7 +1,7 @@
 {
   "configurations": [
     {
-        "name": "Attach to Poetry Python",
+        "name": "Attach to Poetry Shell",
         "type": "python",
         "request": "attach",
         "connect": {

@@ -1,12 +1,13 @@
 import re
 import unicodedata
+from .input import BaseInputHandler
 from . import TokenType, Token
 from typing import Any
 
 class JQUtils:
     """Utility class for common JQ checks"""
     
-    @classmethod
+    @staticmethod
     def is_valid_identifier(char: str, is_start:bool = False) -> bool:
         """Checks if current char is allowed for a valid identifier
         Args:
@@ -21,14 +22,14 @@ class JQUtils:
         if is_start:
             return (char.isalpha() or char == '_')
         
-        return (char.isalnum or char == '_')
+        return (char.isalnum() or char == '_')
     
-    @classmethod
+    @staticmethod
     def is_valid_number(char: str, next: str) -> bool:
         return ( char.isdigit() or (char=='-' and next.isdigit()) )
     
-    @classmethod
-    def create_token(category: str, type: TokenType, value: Any=None, handler=None, **kwargs):
+    @staticmethod
+    def create_token(category: str, type: TokenType, value: Any=None, handler: BaseInputHandler=None, **kwargs):
         """Created a Token from a given TokenType
         Args:
             category (str): Token category.
@@ -43,7 +44,7 @@ class JQUtils:
             line = kwargs.get("line", -1)
             col = kwargs.get("col", -1)
         else:
-            line, col = handler.position()
+            line, col, _ = handler.position()
 
         if not value:
             token = Token(category, type, type.value, line, col)

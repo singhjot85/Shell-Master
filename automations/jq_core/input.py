@@ -1,5 +1,6 @@
 from abc import abstractmethod
-from . import NEW_LINES, StringHandlerException
+from .constants import NEW_LINES
+from .errors import StringHandlerException
 
 class BaseInputHandler:
 
@@ -69,7 +70,7 @@ class StringInputHandler(BaseInputHandler):
 
     def peek(self) -> str:
         """Returns the next character does not move the pointer """
-        if not self.eof():
+        if not self.eof() and self.index + 1 < self.size:
             return self.text[self.index + 1]
         else:
             return None
@@ -81,8 +82,7 @@ class StringInputHandler(BaseInputHandler):
             self.col += 1
 
             if not self.eof():
-                self.char = self.text[self.index]
-                 
+                self.char = self.text[self.index] 
                 # Handler will never be on newline
                 if self.char in NEW_LINES:
                     self.handle_newline()
@@ -120,8 +120,10 @@ class StringInputHandler(BaseInputHandler):
             and not self.eof()
         ):
             self.index += 1
-            if not self.eof:
+            if not self.eof():
                 self.char = self.text[self.index]
+            else:
+                self.char = None
 
             self.line += 1
             self.col = 0

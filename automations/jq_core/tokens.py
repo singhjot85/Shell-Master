@@ -11,7 +11,11 @@ class TokenType(Enum):
     Operators: Symbols that perform computation. Ex: +, -, *, /
     Delimiters: Characters used to structure code. Ex: (, ), {, }, [, ], , ;, .
     """
-    pass
+    def __str__(self):
+        return "TokenType"
+    
+    def __repr__(self):
+        return "tokentype"
 
 class Keywords(TokenType):
     IF = "if"
@@ -32,11 +36,23 @@ class Keywords(TokenType):
     BREAK = "break"
     REDUCE = "reduce"
     FOREACH = "foreach"
+    
+    def __str__(self):
+        return "Keywords"
+    
+    def __repr__(self):
+        return "keywords"
 
 class Identifiers(TokenType):
     ACCESS_VARIABLE = "access_variable"  # .first_name
     VARIAVBLE = "variable" # $firstName
     FUNCTION = "function"  # def fisrName: 
+
+    def __str__(self):
+        return "Identifiers"
+    
+    def __repr__(self):
+        return "identifiers"
 
 class Literals(TokenType):
     NUMBER = "number"      # 10 
@@ -44,6 +60,12 @@ class Literals(TokenType):
     NULL = "null"
     TRUE = "true"
     FALSE = "false"
+
+    def __str__(self):
+        return "Literals"
+    
+    def __repr__(self):
+        return "literals"
 
 class Operators(TokenType):
     ADDITION = "+"
@@ -58,6 +80,12 @@ class Operators(TokenType):
     GREATER_THAN = ">"
     LESS_THAN_EQUAL = "<="
     GREATER_THAN_EQUAL = ">="
+
+    def __str__(self):
+        return "Operators"
+
+    def __repr__(self):
+        return "operators"
 
 class Delimiters(TokenType):
     EOF = "EOF"
@@ -80,6 +108,12 @@ class Delimiters(TokenType):
     OPEN_SQUARE_BRACKET = "["
     CLOSE_SQUARE_BRACKET = "]"
 
+    def __str__(self):
+        return "Delimiters"
+    
+    def __repr__(self):
+        return "delimiters"
+
 @dataclass
 class Token:
     """A Token for JQ program
@@ -90,6 +124,9 @@ class Token:
     value: str | int | float | None
     line: int
     col: int
+
+    def __str__(self):
+        return f"<Token {self.type} - '{self.value}'>"
 
     def __repr__(self):
         return f"<Token {self.type} - '{self.value}'>"
