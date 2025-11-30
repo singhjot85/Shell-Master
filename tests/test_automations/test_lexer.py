@@ -2,8 +2,10 @@
 import logging
 from automations.jq_core.lexer import Lexer
 from tests.test_automations.dummy_data import (
-    TESTCASE_RESULTS_TYPE_1, 
-    TESTCASE_RESULTS_COMPLETE_PROGRAMS
+    INPUT_TYPE_1,
+    RESULT_TYPE_1, 
+    COMPLETE_PROGRAMS,
+    COMPLETE_PROGRAMS_RESULTS
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -12,30 +14,33 @@ class TestLexer:
     def setup(self):
         LOGGER.info("---------- Testing Lexer ----------")
         
-    def test_no_brackerts(self):
-        LOGGER.info("TestCases Type: No Brackets")
+    def test_simple_cases(self):
+        LOGGER.info("TestCases Type: Simple Short Program")
+        
+        for test_case, program in INPUT_TYPE_1.items():
+            expected_result = RESULT_TYPE_1[test_case]
 
-        for x, (program, result) in enumerate(TESTCASE_RESULTS_TYPE_1.items(), start=0):
-            LOGGER.info("Testcase no: %s, \nProgram >>> %s", x+1, program)
+            LOGGER.info("Testcase no: %s, \nProgram >>> %s", test_case, program)
             tokens = Lexer(program).tokenize()
+            
+            LOGGER.info("Expected >>> %s, \n Recieved >>> %s", expected_result, tokens)
+            assert isinstance(tokens, list)
+            # assert len(tokens) == len(expected_result)
+            assert tokens.__str__() == expected_result
 
-            assert isinstance(tokens, list) == True
-            assert len(tokens) == len(result)
-            for i, _ in enumerate(result):
-                LOGGER.info("Current Token number %s", i)
-                LOGGER.info("Computed Token %s, Predefined Token %s", tokens[i], result[i])
-                assert tokens[i].type == result[i].type
-                assert tokens[i].value == result[i].value
-    
-    def test_complete_program(self):
-        LOGGER.info("TestCases Type: COMPLETE PROGRAMS")
+    def test_simple_large_programs(self):
+        LOGGER.info("TestCases Type: Simple Large Program")
 
-        for x, (program, result) in enumerate(TESTCASE_RESULTS_COMPLETE_PROGRAMS.items(), start=0):
-            LOGGER.info("Testcase no: %s, Program >>> %s", x+1, program)
+        for test_case, program in COMPLETE_PROGRAMS.items():
+            expected_result = COMPLETE_PROGRAMS_RESULTS[test_case]
+
+            LOGGER.info("Testcase no: %s, \nProgram >>> %s", test_case, program)
             tokens = Lexer(program).tokenize()
-
-            assert isinstance(tokens, list) == True
-            assert tokens.__str__() == result
+            
+            LOGGER.info("Expected >>> %s, \n Recieved >>> %s", expected_result, tokens)
+            assert isinstance(tokens, list)
+            # assert len(tokens) == len(expected_result)
+            assert tokens.__str__() == expected_result
     
     def test_line_col_positions(self):
         pass

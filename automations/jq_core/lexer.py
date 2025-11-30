@@ -49,7 +49,7 @@ class Lexer:
                     tokens.append(self._scan_string())
                     continue
                 if char == Delimiters.COLON.value:
-                    self._process_keys(tokens)
+                    self._process_colon(tokens)
                     continue
                 if JQUtils.is_valid_identifier(char, True):
                     tokens.append(self._scan_identifiers())
@@ -89,18 +89,23 @@ class Lexer:
             return tokens
         # except JQException as exc:
         except Exception as exc:
-            raise exc
+            line, col, _ = self.handler.position()
+            raise Exception(f"Exception occurred in lexing [{line}:{col}]")
     
-    def _process_keys(self, tokens: list[Token]):
+    def _process_colon(self, tokens: list[Token]):
         if(
             tokens
             and tokens[-1]
             and isinstance(tokens[-1], Token)
-            and tokens[-1].type == "Identifiers"
+            and tokens[-1].type in [Identifiers.__name__, Delimiters.CLOSE_PARENTHESIS.name]
             and tokens[-1].value
         ):
-            tokens[-1].type = Identifiers.MAPPING_KEY.value
-            tokens[-1].value = ''.join([tokens[-1].value, ':'])
+            if tokens[-1].type == Identifiers.__name__:
+                tokens[-1].type = Identifiers.MAPPING_KEY.value
+                tokens[-1].value = ''.join([tokens[-1].value, ':'])
+            if tokens[-1].type == Delimiters.CLOSE_PARENTHESIS:
+                # def fun():  # Should we handle this case of colon also
+                pass
             self.handler.next()
             return
         raise Exception("Invalid key name")
@@ -111,8 +116,7 @@ class Lexer:
         """
         self.handler.next()
         if not self.handler.char:
-            err_str = "Invalid Variable Name"
-            raise Exception(err_str)
+            return JQUtils.create_token(Identifiers.__name__, Identifiers.VARIAVBLE.name, '.', self.handler)
         token:Token = self._scan_identifiers()
         token.type = Identifiers.VARIAVBLE.name
         token.value = ''.join(['$',token.value])
