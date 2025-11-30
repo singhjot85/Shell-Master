@@ -2,10 +2,10 @@
 PYTHON_SHELL = poetry run ipython
 DEBUG_PORT = 5678
 
-.PHONY: ipd, i, t
+.PHONY: sd, s, t
 
-ipd: python-debug
-i: ipython
+sd: python-debug
+s: ipython
 t: python-test
 
 ipython:

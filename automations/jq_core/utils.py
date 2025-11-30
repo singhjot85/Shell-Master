@@ -1,5 +1,56 @@
 import re
 import unicodedata
+from . import TokenType, Token
+from typing import Any
+
+class JQUtils:
+    """Utility class for common JQ checks"""
+    
+    @classmethod
+    def is_valid_identifier(char: str, is_start:bool = False) -> bool:
+        """Checks if current char is allowed for a valid identifier
+        Args:
+            char (str): Current char.
+            is_start (bool): Is the current character starting char.
+        Returns:
+            (bool): If current character is valid identifier char.
+        """
+        if not char:
+            return False
+        
+        if is_start:
+            return (char.isalpha() or char == '_')
+        
+        return (char.isalnum or char == '_')
+    
+    @classmethod
+    def is_valid_number(char: str, next: str) -> bool:
+        return ( char.isdigit() or (char=='-' and next.isdigit()) )
+    
+    @classmethod
+    def create_token(category: str, type: TokenType, value: Any=None, handler=None, **kwargs):
+        """Created a Token from a given TokenType
+        Args:
+            category (str): Token category.
+            type (TokenType): Type of token.
+            value (Any): Value of token.
+            handler (Handler): Handler used for iteration/walking the program.
+        Returns:
+            token (Token): A valid JQ token.w
+        """
+        token = None
+        if not handler:
+            line = kwargs.get("line", -1)
+            col = kwargs.get("col", -1)
+        else:
+            line, col = handler.position()
+
+        if not value:
+            token = Token(category, type, type.value, line, col)
+        else:
+            token = Token(category, type, value, line, col)
+
+        return token
 
 class StringNormalizer:
     """

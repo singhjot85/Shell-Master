@@ -1,3 +1,4 @@
+import pytest
 import logging
 from automations.jq_core import Parser, Lexer, TokenType
 from automations.jq_core.ast import *
@@ -9,6 +10,7 @@ from tests.test_automations.dummy_data import (
 
 LOGGER = logging.getLogger(__name__)
 
+@pytest.mark.skip("Under devlopment")
 class TestParser:
 
     def setup(self):

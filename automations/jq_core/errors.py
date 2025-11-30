@@ -11,3 +11,8 @@ class ParseError(Exception):
     def __init__(self, **kwargs):
         self.message = kwargs.get("msg", "Unkown error")
         super().__init__(f"Error occurred while parsing: {self.message}")
+
+class StringHandlerException(Exception):
+    def __init__(self, *args):
+        self.message = args[0] or "Unkwon Exception"
+        super().__init__(self.message)

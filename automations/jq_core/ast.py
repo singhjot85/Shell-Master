@@ -1,15 +1,29 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any, List
 
 # Base node for common logic and type convention
 @dataclass
 class ASTNode:
     """Base class for all AST nodes."""
-    pass
+    value: Any
+    level: int
+    children: list
 
+    def __init__(self, value: Any, level: int):
+        self.value: Any = value
+        self.level: list = level
+        self.children: list = []
+    
+    def add_children(self, child_node):
+        self.children.append(child_node)
+    
+    def __repr__(self):
+        return f"ASTNode({self.value})"
 
-
-# Basic Nodes
+"""
+Primitive Nodes 
+Most probably will be Leaf nodes
+"""
 @dataclass
 class NumberLiteral(ASTNode):
     value: float | int
@@ -28,18 +42,30 @@ class NullLiteral(ASTNode):
 
 @dataclass
 class Identifier(ASTNode):
-    name: str
+    """Identifier will have keywords as of now but later will be seperated,
+    Ex: some_identifier
+    """
+    value: str
+
+@dataclass
+class Variable(ASTNode):
+    """A JQ variable
+    Format: $var
+    """
+    value: str
 
 @dataclass
 class Identity(ASTNode):
-    """Represents '.' in jq."""
-    pass
+    """Represents '.' in jq
+    this can be . or .some_val
+    """
+    value: Identifier | None
 
-
-
-# Expressions
 @dataclass
 class BinaryExpr(ASTNode):
+    """Binary expressions
+    Ex: . * 2 
+    """
     left: ASTNode
     operator: str
     right: ASTNode
@@ -54,11 +80,14 @@ class Grouping(ASTNode):
     expr: ASTNode
 
 
-
 # Object and Array Nodes
 @dataclass
 class Pair(ASTNode):
-    key: str
+    """To simplify Objects, an object will have multiple Pairs
+    Ex: {... key: value, ...}
+    last pair might not have comma, Ex: {.. key: value}
+    """
+    key: str  
     value: ASTNode
 
 @dataclass
