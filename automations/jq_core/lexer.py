@@ -116,7 +116,8 @@ class Lexer:
         """
         self.handler.next()
         if not self.handler.char:
-            return JQUtils.create_token(Identifiers.__name__, Identifiers.VARIAVBLE.name, '.', self.handler)
+            err_str = "Invalid Variable Name"
+            raise Exception(err_str)
         token:Token = self._scan_identifiers()
         token.type = Identifiers.VARIAVBLE.name
         token.value = ''.join(['$',token.value])
@@ -132,8 +133,7 @@ class Lexer:
         """
         self.handler.next()
         if not self.handler.char:
-            err_str = "Invalid Variable Name"
-            raise Exception(err_str)
+            return JQUtils.create_token(Identifiers.__name__, Identifiers.VARIAVBLE.name, '.', self.handler)
         
         value = None
         if self.handler.char == Delimiters.OPEN_SQUARE_BRACKET.value:
