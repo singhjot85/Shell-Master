@@ -1,22 +1,16 @@
 from decimal import Decimal
+
+from . import Delimiters, Identifiers, Keywords, Literals, Operators, Token, TokenType
+from .constants import NEW_LINES, STRING_MAPPING, WHITE_SPACES
+from .input import BytesInputHandler, StringInputHandler
 from .utils import JQUtils
-from .input import StringInputHandler, BytesInputHandler
-from .constants import STRING_MAPPING, WHITE_SPACES, NEW_LINES
-from . import (
-    Token, 
-    TokenType, 
-    Keywords,
-    Identifiers,
-    Literals,
-    Operators,
-    Delimiters,
-)
+
 
 class Lexer:
-    """ Implements the algorithm for lexical analyzer """
+    """Implements the algorithm for lexical analyzer"""
 
     def __init__(self, source: str):
-        """ keeping the logic of lines and columns as we need it in debugger """
+        """keeping the logic of lines and columns as we need it in debugger"""
         self.handler = None
         if isinstance(source, str):
             self.handler: StringInputHandler = StringInputHandler(source)
@@ -26,12 +20,9 @@ class Lexer:
     def tokenize(self) -> list[Token] | list:
         try:
             tokens = []
-            while (
-                not self.handler.eof()
-                and (char := self.handler.char)
-            ):
+            while not self.handler.eof() and (char := self.handler.char):
                 next_char = self.handler.peek()
-                if(
+                if (
                     char in WHITE_SPACES
                     or char in NEW_LINES
                     or char == Delimiters.HASH.value
@@ -63,46 +54,41 @@ class Lexer:
                     category = Delimiters.__name__
                     type = Delimiters(char).name
                     value = Delimiters(char).value
-                if char in Operators._value2member_map_ :
+                if char in Operators._value2member_map_:
                     category = Operators.__name__
                     type = Operators(char).name
                     value = Operators(char).value
-                if (
-                    next_char 
-                    and (
-                        (operator := ''.join([char,next_char]) ) 
-                        in Operators._value2member_map_
-                    )
+                if next_char and (
+                    (operator := "".join([char, next_char]))
+                    in Operators._value2member_map_
                 ):
                     category = Operators.__name__
                     type = Operators(operator).name
                     value = Operators(operator).value
                     self.handler.next()
                 if type or value or category:
-                    tokens.append(JQUtils.create_token(
-                        category,
-                        type,
-                        value,
-                        self.handler 
-                    ))
+                    tokens.append(
+                        JQUtils.create_token(category, type, value, self.handler)
+                    )
                     self.handler.next()
             return tokens
         # except JQException as exc:
         except Exception as exc:
             line, col, _ = self.handler.position()
             raise Exception(f"Exception occurred in lexing [{line}:{col}]")
-    
+
     def _process_colon(self, tokens: list[Token]):
-        if(
+        if (
             tokens
             and tokens[-1]
             and isinstance(tokens[-1], Token)
-            and tokens[-1].type in [Identifiers.__name__, Delimiters.CLOSE_PARENTHESIS.name]
+            and tokens[-1].type
+            in [Identifiers.__name__, Delimiters.CLOSE_PARENTHESIS.name]
             and tokens[-1].value
         ):
             if tokens[-1].type == Identifiers.__name__:
                 tokens[-1].type = Identifiers.MAPPING_KEY.value
-                tokens[-1].value = ''.join([tokens[-1].value, ':'])
+                tokens[-1].value = "".join([tokens[-1].value, ":"])
             if tokens[-1].type == Delimiters.CLOSE_PARENTHESIS:
                 # def fun():  # Should we handle this case of colon also
                 pass
@@ -111,16 +97,16 @@ class Lexer:
         raise Exception("Invalid key name")
 
     def _scan_variable(self) -> Token:
-        """Scan of JQ variables: $varName234 
+        """Scan of JQ variables: $varName234
         Possiblities: $[A-Za-z_][A-Za-z0-9_]
         """
         self.handler.next()
         if not self.handler.char:
             err_str = "Invalid Variable Name"
             raise Exception(err_str)
-        token:Token = self._scan_identifiers()
+        token: Token = self._scan_identifiers()
         token.type = Identifiers.VARIAVBLE.name
-        token.value = ''.join(['$',token.value])
+        token.value = "".join(["$", token.value])
         return token
 
     def _scan_access_variable(self) -> Token:
@@ -133,53 +119,49 @@ class Lexer:
         """
         self.handler.next()
         if not self.handler.char:
-            return JQUtils.create_token(Identifiers.__name__, Identifiers.VARIAVBLE.name, '.', self.handler)
-        
+            return JQUtils.create_token(
+                Identifiers.__name__, Identifiers.VARIAVBLE.name, ".", self.handler
+            )
+
         value = None
         if self.handler.char == Delimiters.OPEN_SQUARE_BRACKET.value:
             # Variable is .["foo-@bar"]
-            buf = ['.', '[', self._scan_string().value, ']']
-            value = ''.join(buf)
+            buf = [".", "[", self._scan_string().value, "]"]
+            value = "".join(buf)
         if self.handler.char == Delimiters.DOUBLE_QOUTES.value:
             # Variable is ."foo-@bar"
-            value = ''.join(['.', self._scan_string().value])
-        
-        value = ''.join(['.',self._scan_identifiers().value])
-        
+            value = "".join([".", self._scan_string().value])
+
+        value = "".join([".", self._scan_identifiers().value])
+
         return JQUtils.create_token(
-            Identifiers.__name__,
-            Identifiers.ACCESS_VARIABLE.value,
-            value,
-            self.handler
+            Identifiers.__name__, Identifiers.ACCESS_VARIABLE.value, value, self.handler
         )
 
     def _scan_string(self) -> Token:
         """Scans for a string and returns a string Token"""
         ret: list = ['"']
-        self.handler.next() # Start String Scanning
+        self.handler.next()  # Start String Scanning
         while not self.handler.eof():
             c = self.handler.char
-            if c == '"': # End of String
-                self.handler.next() # Take out of current string
+            if c == '"':  # End of String
+                self.handler.next()  # Take out of current string
                 ret.append('"')
                 return JQUtils.create_token(
-                    Literals.__name__,
-                    Literals.STRING.name,
-                    ''.join(ret),
-                    self.handler
+                    Literals.__name__, Literals.STRING.name, "".join(ret), self.handler
                 )
-            
+
             if c == "\\":
                 esc = self.handler.next()
                 if esc in '"\\/bfnrt':
                     ret.append(STRING_MAPPING[esc])
-                elif esc == "u": # Read exactly 4 hex digits
+                elif esc == "u":  # Read exactly 4 hex digits
                     hex_digits = [self.handler.next() for _ in range(4)]
-                    if not all(d.lower() in '0123456789abcdef' for d in hex_digits): 
+                    if not all(d.lower() in "0123456789abcdef" for d in hex_digits):
                         Exception(msg="Invalid \\u escape")
-                    codepoint = int(''.join(hex_digits), 16)
+                    codepoint = int("".join(hex_digits), 16)
                     ret.append(chr(codepoint))
-            elif c == '\n': # Newline inside stings
+            elif c == "\n":  # Newline inside stings
                 line, col, _ = self.handler.position()
                 raise Exception("Newlines inside string are not allowed")
             else:
@@ -220,13 +202,10 @@ class Lexer:
                 self.handler.next()
 
         # Extract the raw substring from start_idx to current position
-        raw_number = self.handler.text[start_idx:self.handler.index]
+        raw_number = self.handler.text[start_idx : self.handler.index]
 
         value = None
-        if (
-            "e" in raw_number.lower() 
-            or "E" in raw_number.lower()
-        ):
+        if "e" in raw_number.lower() or "E" in raw_number.lower():
             value = Decimal(raw_number)
         elif "." in raw_number:
             value = float(raw_number)
@@ -234,10 +213,7 @@ class Lexer:
             value = int(raw_number)
 
         return JQUtils.create_token(
-            Literals.__name__,
-            Literals.NUMBER.value,
-            value,
-            self.handler
+            Literals.__name__, Literals.NUMBER.value, value, self.handler
         )
 
     def _scan_identifiers(self) -> TokenType:
@@ -248,46 +224,42 @@ class Lexer:
         """
         buffer = [self.handler.char]
         self.handler.next()
-        
+
         while (
             not self.handler.eof()
             and (char := self.handler.char)
-            and JQUtils.is_valid_identifier(char) 
+            and JQUtils.is_valid_identifier(char)
         ):
             buffer.append(char)
             self.handler.next()
 
         category = Identifiers.__name__
         # type can be Identifiers.FUNCTION as that's the only one not covered yet
-        type = category 
-        value = ''.join(buffer)
+        type = category
+        value = "".join(buffer)
 
         if value in Keywords._value2member_map_:
             category = Keywords.__name__
             type = Keywords(value).name
             value = Keywords(value).value
 
-        return JQUtils.create_token(
-            category,
-            type,
-            value,
-            self.handler
-        )
+        return JQUtils.create_token(category, type, value, self.handler)
+
 
 # class LexerExtended(Lexer):
 #     """
 #     A stack based approch that gives nested objects in a list of tokens
-#     Needs bug-fixes and is increasing complexity, 
+#     Needs bug-fixes and is increasing complexity,
 #     The base lexer should work fine for all usecases.
 #     """
 #     def __init__(self, source):
 #         super().__init__(source)
-    
+
 #     def _is_same_set(self, key: str) -> bool:
 #         """ Return if the key(given) and self.handler.char are of same set """
 #         if not key:
 #             return False
-        
+
 #         if key in OPENING_BRACKETS:
 #             if key == TokenType.LPAREN.value:
 #                 return self.handler.char == TokenType.RPAREN.value
@@ -347,7 +319,7 @@ class Lexer:
 #                         prev_start_idx = self._peep_last_tuple(stack)[1] + 1
 #                     else:
 #                         prev_start_idx = stack.pop()
-                        
+
 #                     if prev_start_idx is None:
 #                         raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
 #                     if tokens:=self._lexit(prev_start_idx):
@@ -355,7 +327,7 @@ class Lexer:
 #                         stack.append(tokens)
 
 #                 opening_brac: tuple[TokenType, int] = (
-#                     self.create_token(OPENING_BRACKETS[self.handler.char]), 
+#                     self.create_token(OPENING_BRACKETS[self.handler.char]),
 #                     self.handler.index
 #                 )
 #                 stack.append(opening_brac)
@@ -369,18 +341,18 @@ class Lexer:
 #                 ):
 #                     line, col, _ = self.handler.position()
 #                     raise LexerError(msg="Imbalanced Brackets", line=line, col=col)
-                
+
 #                 prev_start_idx = top_tuple[1] + 1
 #                 if prev_start_idx is None:
 #                     raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
 #                 if tokens:=self._lexit(prev_start_idx):
 #                     tokens: list[TokenType]
 #                     stack.append(tokens)
-                
+
 #                 temp_list: list[Token | list]= []
 #                 while stack[-1] and not isinstance(stack[-1], tuple):
 #                     temp_list.extend(stack.pop())
-                
+
 #                 closing_brac = [stack.pop()[0]]
 #                 if temp_list:
 #                     closing_brac.append(temp_list)
@@ -390,5 +362,5 @@ class Lexer:
 #                 self.handler.next()
 #                 continue
 #             self.handler.next()
-        
+
 #         return stack

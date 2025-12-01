@@ -17,7 +17,7 @@
 #         self.current_level_nodes: list[ASTNode] = []
 #         self.current_level: int = 0
 #         self.highest_level: int = 0
-    
+
 #     def parse(self):
 #         """ Main entry point - returns a complete AST(Abstract Syntax Tree) """
 #         try:
@@ -40,7 +40,7 @@
 #     def is_at_end(self):
 #         """Check if we've reached EOF."""
 #         return (
-#             self.current_idx == self.total_tokens - 1 
+#             self.current_idx == self.total_tokens - 1
 #             or self.current==TokenType.EOF
 #         )
 
@@ -78,7 +78,7 @@
 #         if self.check(token_type):
 #             return self.advance()
 #         raise Exception(f"{message} at line {self.current.line}")
-    
+
 #     def is_identifier_begin(self, ch:str) -> bool:
 #         if not ch:
 #             return False
@@ -87,11 +87,11 @@
 # class Parser(BaseParser):
 
 #     def parse_expression(self):
-        
+
 #         if self.current.type in POSSIBLE_ROOTS:
 #             pass
 
-#     def parse_primary(self):        
+#     def parse_primary(self):
 #         if self.match(TokenType.NUMBER):
 #             return NumberLiteral(float(self.current.value))
 
@@ -114,7 +114,7 @@
 #             return BooleanLiteral(False)
 
 #         raise Exception(f"Unexpected token {self.current}")
-    
+
 #     def parse_pairs(self):
 #         self.parse_primary()
 #         if not self.match(TokenType.COLON):

@@ -1,6 +1,8 @@
 from abc import abstractmethod
+
 from .constants import NEW_LINES
 from .errors import StringHandlerException
+
 
 class BaseInputHandler:
 
@@ -30,13 +32,14 @@ class BaseInputHandler:
 
     @abstractmethod
     def sync_handler(self):
-        """Sync handler variables to the head, 
+        """Sync handler variables to the head,
         if somehow it gets out of sync
         """
 
+
 class CheckPoint:
     checkpoint_index: int = 0
-    checkpoint_char:str = None
+    checkpoint_char: str = None
     checkpoint_line: int = 0
     checkpoint_col: int = 0
 
@@ -48,12 +51,13 @@ class CheckPoint:
             col (int): Checkpoint column
             char (str): Checkpoint Char
         """
-        self.checkpoint_index = kwarg.get("idx")        
+        self.checkpoint_index = kwarg.get("idx")
         if not self.checkpoint_index:
             raise Exception("Checkpoint requires index to save")
         self.checkpoint_char = kwarg.get("char")
         self.checkpoint_line = kwarg.get("line")
         self.checkpoint_line = kwarg.get("col")
+
 
 class StringInputHandler(BaseInputHandler):
     """Handler to iterate a string input source"""
@@ -69,20 +73,20 @@ class StringInputHandler(BaseInputHandler):
         self.col = 0
 
     def peek(self) -> str:
-        """Returns the next character does not move the pointer """
+        """Returns the next character does not move the pointer"""
         if not self.eof() and self.index + 1 < self.size:
             return self.text[self.index + 1]
         else:
             return None
 
     def next(self) -> str:
-        """ moves to next character and returns it """
+        """moves to next character and returns it"""
         if not self.eof():
             self.index += 1
             self.col += 1
 
             if not self.eof():
-                self.char = self.text[self.index] 
+                self.char = self.text[self.index]
                 # Handler will never be on newline
                 if self.char in NEW_LINES:
                     self.handle_newline()
@@ -100,11 +104,7 @@ class StringInputHandler(BaseInputHandler):
 
     def save(self) -> CheckPoint:
         """Return a checkpoint index to allow rollback."""
-        save_params = {
-            "idx": self.index,
-            "line": self.line,
-            "col": self.col
-        }
+        save_params = {"idx": self.index, "line": self.line, "col": self.col}
         return CheckPoint(**save_params)
 
     def restore(self, checkpoint: CheckPoint):
@@ -115,10 +115,7 @@ class StringInputHandler(BaseInputHandler):
         self.char = self.text[self.index]
 
     def handle_newline(self):
-        while (
-            self.char in NEW_LINES
-            and not self.eof()
-        ):
+        while self.char in NEW_LINES and not self.eof():
             self.index += 1
             if not self.eof():
                 self.char = self.text[self.index]
@@ -142,16 +139,20 @@ class StringInputHandler(BaseInputHandler):
                 self.line += 1
                 self.col = 0
 
+
 class BytesInputHandler(StringInputHandler):
     """Handler to iterate over a byte input
     To read directly from a network/file"""
+
     def __init__(self, text):
         """Simplest implementation is to re-use a string a handler
         Later on a fast handler can be devloped"""
         super().__init__(text)
 
+
 class StreamInputHandler(BaseInputHandler):
     """Handler for a continous stream of file
     Needed in case of large files, for scalability
     Consume the programs in chunks"""
+
     pass

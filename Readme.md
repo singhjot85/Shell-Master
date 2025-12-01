@@ -13,7 +13,7 @@ Design:
 - Build AST nodes with complete source-span metadata
     - Preserve comments + whitespace in a “trivia” structure
 
-1. Debugger 
+1. Debugger
     - Instrumentation around AST eval
     - Structured error handling
 2. Formatter
@@ -33,9 +33,9 @@ To-do list:
 - [ ] Prototype of a jq debugger (pseudo-code)
 - [ ] Formatter visitor template
 
-Progress Tracker:  
-- [X] Handlers  
-    - [ ] Tests 
+Progress Tracker:
+- [X] Handlers
+    - [ ] Tests
 - [ ] Lexer
     - [ ] Proper tokentype/ category
     - [ ] Proper raw lexeme data
