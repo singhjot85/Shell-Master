@@ -36,11 +36,11 @@ To-do list:
 Progress Tracker:
 - [X] Handlers
     - [ ] Tests
-- [ ] Lexer
-    - [ ] Proper tokentype/ category
-    - [ ] Proper raw lexeme data
-    - [ ] Proper lexeme position
-    - [ ] Tests
+- [x] Lexer
+    - [X] Proper tokentype/ category
+    - [X] Proper raw lexeme data
+    - [X] Proper lexeme position
+    - [x] Tests
 - [ ] Parser
     - [ ] Grammar
     - [ ] Proper AST nodes
