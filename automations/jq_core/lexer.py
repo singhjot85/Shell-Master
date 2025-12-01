@@ -1,404 +1,366 @@
 from decimal import Decimal
-from . import Token, TokenType, LexerError
-from .constants import (
-    STRING_MAPPING, 
-    KEYWORDS_MAPPING, 
-    WHITE_SPACES,
-    NEW_LINES,
-    COMMENT_HASH,
-    STRING_QUOTE,
-    CLOSING_BRACKETS,
-    OPENING_BRACKETS,
-    DEFAULT_IDENTIFIERS,
-    OPERATORS
-)
+
+from . import Delimiters, Identifiers, Keywords, Literals, Operators, Token, TokenType
+from .constants import NEW_LINES, STRING_MAPPING, WHITE_SPACES
+from .input import BytesInputHandler, StringInputHandler
+from .utils import JQUtils
+
 
 class Lexer:
-    """ Implements the algorithm for lexical analyzer """
+    """Implements the algorithm for lexical analyzer"""
 
     def __init__(self, source: str):
-        """ keeping the logic of lines and columns as we need it in debugger """
-        
-        self.program: str = source
-        self.program_size: int = len(self.program)
-        
-        self.current: str = self.program[0] if self.program else None
-        self.current_idx: int = 0
-        self.line: int = 0
-        self.col: int = 0 
+        """keeping the logic of lines and columns as we need it in debugger"""
+        self.handler = None
+        if isinstance(source, str):
+            self.handler: StringInputHandler = StringInputHandler(source)
+        elif isinstance(source, (bytes, bytearray)):
+            self.handler: BytesInputHandler = BytesInputHandler(source)
 
-    def tokenize(self) -> list[Token] | None:
-        """ Return a list of valid JQ tokens given a string of JQ program"""
+    def tokenize(self) -> list[Token] | list:
         try:
-            tokens :list[Token] = []
-
-            while not self._is_end() and self.current:
-                ch = self.current
-
-                # Only for optimization
-                if self.current in WHITE_SPACES:
-                    self._advance()
-                    continue
-                if ch in NEW_LINES:                    
-                    self._line_break()
-                    self._advance()
-                    continue
-                if ch == COMMENT_HASH:
-                    # TODO: handle Comments
-                    self.skip_comments()
+            tokens = []
+            while not self.handler.eof() and (char := self.handler.char):
+                next_char = self.handler.peek()
+                if (
+                    char in WHITE_SPACES
+                    or char in NEW_LINES
+                    or char == Delimiters.HASH.value
+                ):
+                    self.handler.next()
                     continue
 
-                if ch == TokenType.DOLLAR.value:
-                    tokens.extend(self.scan_variable())
-                    continue            
-                if ch == TokenType.DOT.value:
-                    tokens.extend(self.handle_accessor())
+                if char == Delimiters.DOLLAR.value:
+                    tokens.append(self._scan_variable())
                     continue
-                if self._is_identifier_begin(ch):
-                    tokens.append(self.handle_identifier())
+                if char == Delimiters.DOT.value:
+                    tokens.append(self._scan_access_variable())
                     continue
-                if ch == STRING_QUOTE: # Handle Strings
-                    tokens.append(self.scan_string())
+                if char == Delimiters.DOUBLE_QOUTES.value:
+                    tokens.append(self._scan_string())
                     continue
-                if ch.isdigit() or (ch=='-' and self._peek().isdigit()):
-                    # Handles Integers/Floats/Exponents
-                    tokens.append(self.scan_number())
+                if char == Delimiters.COLON.value:
+                    self._process_colon(tokens)
+                    continue
+                if JQUtils.is_valid_identifier(char, True):
+                    tokens.append(self._scan_identifiers())
+                    continue
+                if JQUtils.is_valid_number(char, next_char):
+                    tokens.append(self._scan_number())
                     continue
 
-                if ch in KEYWORDS_MAPPING:
-                    tokens.append(self._create_token(KEYWORDS_MAPPING[ch]))
-                if ch in OPENING_BRACKETS:
-                    tokens.append(self._create_token(OPENING_BRACKETS[ch]))
-                if ch in CLOSING_BRACKETS:
-                    tokens.append(self._create_token(CLOSING_BRACKETS[ch]))
-                if ch in OPERATORS:
-                    tokens.append(self.handle_operators())
-
-                self._advance()
+                type, value, category = (None, None, None)
+                if char in Delimiters._value2member_map_:
+                    category = Delimiters.__name__
+                    type = Delimiters(char).name
+                    value = Delimiters(char).value
+                if char in Operators._value2member_map_:
+                    category = Operators.__name__
+                    type = Operators(char).name
+                    value = Operators(char).value
+                if next_char and (
+                    (operator := "".join([char, next_char]))
+                    in Operators._value2member_map_
+                ):
+                    category = Operators.__name__
+                    type = Operators(operator).name
+                    value = Operators(operator).value
+                    self.handler.next()
+                if type or value or category:
+                    tokens.append(
+                        JQUtils.create_token(category, type, value, self.handler)
+                    )
+                    self.handler.next()
             return tokens
-        except Exception as excp:
-            raise LexerError(msg="Error during lexical analysis", line=self.line, col=self.col ) from excp
-    
-    ###### Helpers ######
+        # except JQException as exc:
+        except Exception as exc:
+            line, col, _ = self.handler.position()
+            raise Exception(f"Exception occurred in lexing [{line}:{col}]")
 
-    def _is_end(self) -> bool:
-        return not (self.current_idx < self.program_size)
+    def _process_colon(self, tokens: list[Token]):
+        if (
+            tokens
+            and tokens[-1]
+            and isinstance(tokens[-1], Token)
+            and tokens[-1].type
+            in [Identifiers.__name__, Delimiters.CLOSE_PARENTHESIS.name]
+            and tokens[-1].value
+        ):
+            if tokens[-1].type == Identifiers.__name__:
+                tokens[-1].type = Identifiers.MAPPING_KEY.value
+                tokens[-1].value = "".join([tokens[-1].value, ":"])
+            if tokens[-1].type == Delimiters.CLOSE_PARENTHESIS:
+                # def fun():  # Should we handle this case of colon also
+                pass
+            self.handler.next()
+            return
+        raise Exception("Invalid key name")
 
-    def _line_break(self) -> None:
-        self.col = 0 
-        self.line += 1
-    
-    def _is_identifier_begin(self, ch:str) -> bool:
-        if not ch:
-            return False
-        return ch.isalpha() or ch == '_'
-    
-    def _is_identifier(self, ch:str) -> bool:
-        if not ch:
-            return False
-        return ch.isalnum() or ch == '_'
-
-    def _advance(self) -> str:
-        """ moves to next character and returns it """
-        if self.current_idx < self.program_size:
-            self.current_idx += 1
-            self.col += 1
-            if self._is_end():
-                self.current = None
-                return None
-            else:
-                self.current = self.program[self.current_idx]
-                return self.current
-        else:
-            self.current = None
-            return None
-    
-    def _peek(self) -> str:
-        """ returns the next character does not move the pointer """
-        if self.current_idx + 1 < self.program_size:
-            return self.program[self.current_idx + 1]
-        else:
-            return None
-     
-    def _create_token(self, ttype: TokenType, value=None) -> Token:
-        """ Create a token given a token_type and value """
-        token = None
-        if not value:
-            token = Token(ttype, ttype.value, 0, 0)
-        else:
-            token = Token(ttype, value, 0, 0)
+    def _scan_variable(self) -> Token:
+        """Scan of JQ variables: $varName234
+        Possiblities: $[A-Za-z_][A-Za-z0-9_]
+        """
+        self.handler.next()
+        if not self.handler.char:
+            err_str = "Invalid Variable Name"
+            raise Exception(err_str)
+        token: Token = self._scan_identifiers()
+        token.type = Identifiers.VARIAVBLE.name
+        token.value = "".join(["$", token.value])
         return token
-    
-    ###### Handles ######
 
-    def handle_accessor(self) -> list[TokenType]:
-        """ return two token_type for .first_name """
+    def _scan_access_variable(self) -> Token:
+        """Scan Access Variable in JQ
+        Possibilities:
+            - .[A-Za-z_][A-Za-z0-9_]
+            - ."..."
+            - .["..."]
+        ... -> can be any character
+        """
+        self.handler.next()
+        if not self.handler.char:
+            return JQUtils.create_token(
+                Identifiers.__name__, Identifiers.VARIAVBLE.name, ".", self.handler
+            )
 
-        str_buffer, ret_tokens=([],[])
+        value = None
+        if self.handler.char == Delimiters.OPEN_SQUARE_BRACKET.value:
+            # Variable is .["foo-@bar"]
+            buf = [".", "[", self._scan_string().value, "]"]
+            value = "".join(buf)
+        if self.handler.char == Delimiters.DOUBLE_QOUTES.value:
+            # Variable is ."foo-@bar"
+            value = "".join([".", self._scan_string().value])
 
-        ret_tokens.append(self._create_token(TokenType.DOT))
-        self._advance()
+        value = "".join([".", self._scan_identifiers().value])
 
-        while self._is_identifier(self.current):
-            str_buffer.append(self.current)
-            self._advance()
-        
-        if str_buffer:
-            value= ''.join(str_buffer)
-            ret_tokens.append(self._create_token(TokenType.ACCESSOR_IDENTIFIER,value))
-        return ret_tokens
-    
-    def handle_identifier(self) -> TokenType:
-        """ Return token for first_name: """
-        str_buffer = []        
-        while self._is_identifier(self.current):
-            str_buffer.append(self.current)
-            self._advance()
-            
-        value= ''.join(str_buffer)
-        if value in DEFAULT_IDENTIFIERS:
-            return self._create_token(DEFAULT_IDENTIFIERS[value])
+        return JQUtils.create_token(
+            Identifiers.__name__, Identifiers.ACCESS_VARIABLE.value, value, self.handler
+        )
 
-        return self._create_token(TokenType.IDENTIFIER, value)
+    def _scan_string(self) -> Token:
+        """Scans for a string and returns a string Token"""
+        ret: list = ['"']
+        self.handler.next()  # Start String Scanning
+        while not self.handler.eof():
+            c = self.handler.char
+            if c == '"':  # End of String
+                self.handler.next()  # Take out of current string
+                ret.append('"')
+                return JQUtils.create_token(
+                    Literals.__name__, Literals.STRING.name, "".join(ret), self.handler
+                )
 
-    def skip_comments(self) -> None:
-        """ Skips line with comments """
-        while not self._is_end():
-            if self.current in NEW_LINES:
-                break
-            self._advance()
-
-    def scan_string(self) -> TokenType:
-        """ Scans for a string and returns a string Token """
-        ret: list = []
-        self._advance() # Start String Scanning
-        while not self._is_end():
-            c = self.current
-            if c == '"': # End of String
-                self._advance() # Take out of current string
-                return self._create_token(TokenType.STRING, ''.join(ret))
-            
             if c == "\\":
-                esc = self._advance()
+                esc = self.handler.next()
                 if esc in '"\\/bfnrt':
                     ret.append(STRING_MAPPING[esc])
-                elif esc == "u": # Read exactly 4 hex digits
-                    hex_digits = [self._advance() for _ in range(4)]
-                    if not all(d.lower() in '0123456789abcdef' for d in hex_digits): 
-                        LexerError(
-                            msg="Invalid \\u escape",
-                            line=self.line,col=self.col
-                        )
-                    codepoint = int(''.join(hex_digits), 16)
+                elif esc == "u":  # Read exactly 4 hex digits
+                    hex_digits = [self.handler.next() for _ in range(4)]
+                    if not all(d.lower() in "0123456789abcdef" for d in hex_digits):
+                        Exception(msg="Invalid \\u escape")
+                    codepoint = int("".join(hex_digits), 16)
                     ret.append(chr(codepoint))
-            elif c == '\n': # Newline inside stings
-                raise LexerError(
-                    msg="Newlines inside string are not allowed",
-                    line=self.line,col=self.col
-                )
+            elif c == "\n":  # Newline inside stings
+                line, col, _ = self.handler.position()
+                raise Exception("Newlines inside string are not allowed")
             else:
                 ret.append(c)
 
-            self._advance()
-            
-        raise LexerError(
-            msg="Invalid JQ (String must be terminated)",
-            line=self.line,col=self.col
-        )
-    
-    def scan_number(self) -> TokenType:
-        start_idx = self.current_idx
+            self.handler.next()
+        raise Exception("Unterminated String detected")
+        # line, col, _ = self.handler.position()
+        # raise LexerError(
+        #     msg="Invalid JQ (String must be terminated)",
+        #     line=line, col=col
+        # )
+
+    def _scan_number(self) -> Token:
+        start_idx = self.handler.index
 
         # Consume leading '-' if present
-        if self.current == "-":
-            self._advance()
+        if self.handler.char == "-":
+            self.handler.next()
 
         # Consume digits
-        while self.current is not None and self.current.isdigit():
-            self._advance()
+        while self.handler.char is not None and self.handler.char.isdigit():
+            self.handler.next()
 
         # Consume optional decimal part
-        if self.current == ".":
-            self._advance()
-            while self.current is not None and self.current.isdigit():
-                self._advance()
+        if self.handler.char == ".":
+            self.handler.next()
+            while self.handler.char is not None and self.handler.char.isdigit():
+                self.handler.next()
 
         # Consume optional exponent part
-        if self.current is not None and self.current.lower() == "e":
-            self._advance()
+        if self.handler.char is not None and self.handler.char.lower() == "e":
+            self.handler.next()
             # Exponent may have + or -
-            if self.current in {"+", "-"}:
-                self._advance()
-            while self.current is not None and self.current.isdigit():
-                self._advance()
+            if self.handler.char in {"+", "-"}:
+                self.handler.next()
+            while self.handler.char is not None and self.handler.char.isdigit():
+                self.handler.next()
 
         # Extract the raw substring from start_idx to current position
-        raw_number = self.program[start_idx:self.current_idx]
+        raw_number = self.handler.text[start_idx : self.handler.index]
 
         value = None
-        if (
-            "e" in raw_number.lower() 
-            or "E" in raw_number.lower()
-        ):
+        if "e" in raw_number.lower() or "E" in raw_number.lower():
             value = Decimal(raw_number)
         elif "." in raw_number:
             value = float(raw_number)
         else:
             value = int(raw_number)
 
-        return self._create_token(TokenType.NUMBER, value)
+        return JQUtils.create_token(
+            Literals.__name__, Literals.NUMBER.value, value, self.handler
+        )
 
-    def scan_variable(self) -> list[TokenType]:
-        """ Scan of JQ variables: $varName234 """
-        ret = [self._create_token(TokenType.DOLLAR)]
-
-        self._advance()
-        if not self._is_identifier_begin(self.current):
-            raise LexerError(
-                msg=f"Invalid variable name start - [{self.current}]", 
-                line=self.line, col=self.col
-            )
-
-        buf = []
-        while self._is_identifier(self.current):
-            buf.append(self.current)
-            self._advance()
-        name = ''.join(buf)
-
-        ret.append(self._create_token(TokenType.VARIABLE, name))
-        return ret
-    
-    def _peep_last_tuple(self, stack: list = []) -> list[tuple[Token,int]] | None:
-        """ Special peep method to peep JQ lexer stack """
-        top_tuple = None
-
-        if stack[-1] and isinstance(stack[-1], tuple):
-            top_tuple = stack[-1]
-        else:
-            for item in reversed(stack):
-                if isinstance(item, tuple):
-                    top_tuple = item
-
-        return top_tuple
-    
-    def _is_same_set(self, key: str) -> bool:
-        """ Return if the key(given) and self.current are of same set """
-        if not key:
-            return False
-        
-        if key in OPENING_BRACKETS:
-            if key == TokenType.LPAREN.value:
-                return self.current == TokenType.RPAREN.value
-            if key == TokenType.LSQRBRC.value:
-                return self.current == TokenType.RSQRBRC.value
-            if key == TokenType.LCURLBRC.value:
-                return self.current == TokenType.RCURLBRC.value
-        if key in CLOSING_BRACKETS:
-            if key == TokenType.RPAREN.value:
-                return self.current == TokenType.LPAREN.value
-            if key == TokenType.RSQRBRC.value:
-                return self.current == TokenType.LSQRBRC.value
-            if key == TokenType.RCURLBRC.value:
-                return self.current == TokenType.LCURLBRC.value
-
-        return False
-    
-    def _lexit(self, start_idx:int) -> list[TokenType]:
-        """ Lexical Analyze a given program, start index is required. """
-        sub_program = self.program[start_idx:self.current_idx]
-        lexer: Lexer = Lexer(sub_program)
-        sub_tokens: list[TokenType] = lexer.tokenize()
-        del lexer
-        return sub_tokens
-
-    def handle_operators(self):
+    def _scan_identifiers(self) -> TokenType:
+        """Scans a valid Identifiers
+        Possibilites:
+            - Starts with [A-Za-z_]
+            - Else [A-Z0-9a-z_]
         """
-        Handle operators: assignemnt, comparison and some deafults
-        """
-        buf = []
-        if (
-            self.current in OPERATORS
-            and self._peek() in OPERATORS
+        buffer = [self.handler.char]
+        self.handler.next()
+
+        while (
+            not self.handler.eof()
+            and (char := self.handler.char)
+            and JQUtils.is_valid_identifier(char)
         ):
-        # For operators with two chars '+=','-='
-            buf.append(self.current)
-            self._advance()
-            buf.append(self.current)
-            complete_operator = ''.join(buf)
-            return self._create_token(OPERATORS[complete_operator])
-        else:
-            return self._create_token(OPERATORS[self.current])
+            buffer.append(char)
+            self.handler.next()
 
-class LexerExtended(Lexer):
-    """
-    Needs optimization and bug-fixes, can be used for debugger,
-    but not as of now.
-    """
-    def __init__(self, source):
-        super().__init__(source)
+        category = Identifiers.__name__
+        # type can be Identifiers.FUNCTION as that's the only one not covered yet
+        type = category
+        value = "".join(buffer)
 
-    def handle_brackets(self) -> list:
-        """
-        Recurive lexer to make things easier for parser.
-        Returns:
-            result (list): List of Tokens in format:
-                [TokenType.RSQRBRC,list[Tokens],TokenType.LSQRBRC]
-        """
-        if self.current not in OPENING_BRACKETS:
-            LexerError(
-                msg="Mismatching Brackets",
-                line=self.line,col=self.col
-            )
+        if value in Keywords._value2member_map_:
+            category = Keywords.__name__
+            type = Keywords(value).name
+            value = Keywords(value).value
 
-        stack: list[tuple[Token,int]] | list[list] | int= []
-        while not self._is_end():
-            if self.current in OPENING_BRACKETS:
-                if stack:
-                    if not isinstance(stack[-1], int):
-                        prev_start_idx = self._peep_last_tuple(stack)[1] + 1
-                    else:
-                        prev_start_idx = stack.pop()
-                        
-                    if prev_start_idx is None:
-                        raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
-                    if tokens:=self._lexit(prev_start_idx):
-                        tokens: list[TokenType]
-                        stack.append(tokens)
+        return JQUtils.create_token(category, type, value, self.handler)
 
-                opening_brac: tuple[TokenType, int] = (
-                    self._create_token(OPENING_BRACKETS[self.current]), 
-                    self.current_idx
-                )
-                stack.append(opening_brac)
-                self._advance()
-                continue
-            if self.current in CLOSING_BRACKETS:
-                top_tuple: tuple[Token,int] = self._peep_last_tuple(stack)
-                if (
-                    not self._is_same_set(top_tuple[0].value)
-                    or not top_tuple
-                ):
-                    LexerError(msg="Imbalanced Brackets", line=self.line, col=self.col)
-                
-                prev_start_idx = top_tuple[1] + 1
-                if prev_start_idx is None:
-                    raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
-                if tokens:=self._lexit(prev_start_idx):
-                    tokens: list[TokenType]
-                    stack.append(tokens)
-                
-                temp_list: list[Token | list]= []
-                while stack[-1] and not isinstance(stack[-1], tuple):
-                    temp_list.extend(stack.pop())
-                
-                closing_brac = [stack.pop()[0]]
-                if temp_list:
-                    closing_brac.append(temp_list)
-                closing_brac.append(self._create_token(CLOSING_BRACKETS[self.current]))
-                stack.append(closing_brac)
 
-                self._advance()
-                continue
-            self._advance()
-        
-        return stack
+# class LexerExtended(Lexer):
+#     """
+#     A stack based approch that gives nested objects in a list of tokens
+#     Needs bug-fixes and is increasing complexity,
+#     The base lexer should work fine for all usecases.
+#     """
+#     def __init__(self, source):
+#         super().__init__(source)
+
+#     def _is_same_set(self, key: str) -> bool:
+#         """ Return if the key(given) and self.handler.char are of same set """
+#         if not key:
+#             return False
+
+#         if key in OPENING_BRACKETS:
+#             if key == TokenType.LPAREN.value:
+#                 return self.handler.char == TokenType.RPAREN.value
+#             if key == TokenType.LSQRBRC.value:
+#                 return self.handler.char == TokenType.RSQRBRC.value
+#             if key == TokenType.LCURLBRC.value:
+#                 return self.handler.char == TokenType.RCURLBRC.value
+#         if key in CLOSING_BRACKETS:
+#             if key == TokenType.RPAREN.value:
+#                 return self.handler.char == TokenType.LPAREN.value
+#             if key == TokenType.RSQRBRC.value:
+#                 return self.handler.char == TokenType.LSQRBRC.value
+#             if key == TokenType.RCURLBRC.value:
+#                 return self.handler.char == TokenType.LCURLBRC.value
+
+#         return False
+
+#     def _lexit(self, start_idx:int) -> list[TokenType]:
+#         """ Lexical Analyze a given program, start index is required. """
+#         sub_program = self.handler.text[start_idx:self.handler.index]
+#         lexer: Lexer = Lexer(sub_program)
+#         sub_tokens: list[TokenType] = lexer.tokenize()
+#         del lexer
+#         return sub_tokens
+
+#     def _peep_last_tuple(self, stack: list = []) -> list[tuple[Token,int]] | None:
+#         """ Special peep method to peep JQ lexer stack """
+#         top_tuple = None
+
+#         if stack[-1] and isinstance(stack[-1], tuple):
+#             top_tuple = stack[-1]
+#         else:
+#             for item in reversed(stack):
+#                 if isinstance(item, tuple):
+#                     top_tuple = item
+
+#         return top_tuple
+
+#     def handle_brackets(self) -> list:
+#         """
+#         Recurive lexer to make things easier for parser.
+#         Returns:
+#             result (list): List of Tokens in format:
+#                 [TokenType.RSQRBRC,list[Tokens],TokenType.LSQRBRC]
+#         """
+#         if self.handler.char not in OPENING_BRACKETS:
+#             LexerError(
+#                 msg="Mismatching Brackets",
+#                 line=self.line,col=self.col
+#             )
+
+#         stack: list[tuple[Token,int]] | list[list] | int= []
+#         while not self.handler.eof():
+#             if self.handler.char in OPENING_BRACKETS:
+#                 if stack:
+#                     if not isinstance(stack[-1], int):
+#                         prev_start_idx = self._peep_last_tuple(stack)[1] + 1
+#                     else:
+#                         prev_start_idx = stack.pop()
+
+#                     if prev_start_idx is None:
+#                         raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
+#                     if tokens:=self._lexit(prev_start_idx):
+#                         tokens: list[TokenType]
+#                         stack.append(tokens)
+
+#                 opening_brac: tuple[TokenType, int] = (
+#                     self.create_token(OPENING_BRACKETS[self.handler.char]),
+#                     self.handler.index
+#                 )
+#                 stack.append(opening_brac)
+#                 self.handler.next()
+#                 continue
+#             if self.handler.char in CLOSING_BRACKETS:
+#                 top_tuple: tuple[Token,int] = self._peep_last_tuple(stack)
+#                 if (
+#                     not self._is_same_set(top_tuple[0].value)
+#                     or not top_tuple
+#                 ):
+#                     line, col, _ = self.handler.position()
+#                     raise LexerError(msg="Imbalanced Brackets", line=line, col=col)
+
+#                 prev_start_idx = top_tuple[1] + 1
+#                 if prev_start_idx is None:
+#                     raise LexerError(msg="Error occurred in recursion",line=self.line, col=self.col)
+#                 if tokens:=self._lexit(prev_start_idx):
+#                     tokens: list[TokenType]
+#                     stack.append(tokens)
+
+#                 temp_list: list[Token | list]= []
+#                 while stack[-1] and not isinstance(stack[-1], tuple):
+#                     temp_list.extend(stack.pop())
+
+#                 closing_brac = [stack.pop()[0]]
+#                 if temp_list:
+#                     closing_brac.append(temp_list)
+#                 closing_brac.append(self.create_token(CLOSING_BRACKETS[self.handler.char]))
+#                 stack.append(closing_brac)
+
+#                 self.handler.next()
+#                 continue
+#             self.handler.next()
+
+#         return stack

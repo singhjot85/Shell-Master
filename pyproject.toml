@@ -39,3 +39,8 @@ log_cli = true
 log_cli_level = "INFO"
 log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 log_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.flake8]
+per-file-ignores = [
+    "automations/jq_core/__init__.py:F401,I001",
+]

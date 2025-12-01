@@ -1,5 +1,66 @@
 import re
 import unicodedata
+from typing import Any
+
+from . import Token, TokenType
+from .input import BaseInputHandler
+
+
+class JQUtils:
+    """Utility class for common JQ checks"""
+
+    @staticmethod
+    def is_valid_identifier(char: str, is_start: bool = False) -> bool:
+        """Checks if current char is allowed for a valid identifier
+        Args:
+            char (str): Current char.
+            is_start (bool): Is the current character starting char.
+        Returns:
+            (bool): If current character is valid identifier char.
+        """
+        if not char:
+            return False
+
+        if is_start:
+            return char.isalpha() or char == "_"
+
+        return char.isalnum() or char == "_"
+
+    @staticmethod
+    def is_valid_number(char: str, next: str) -> bool:
+        return char.isdigit() or (char == "-" and next.isdigit())
+
+    @staticmethod
+    def create_token(
+        category: str,
+        type: TokenType,
+        value: Any = None,
+        handler: BaseInputHandler = None,
+        **kwargs,
+    ):
+        """Created a Token from a given TokenType
+        Args:
+            category (str): Token category.
+            type (TokenType): Type of token.
+            value (Any): Value of token.
+            handler (Handler): Handler used for iteration/walking the program.
+        Returns:
+            token (Token): A valid JQ token.w
+        """
+        token = None
+        if not handler:
+            line = kwargs.get("line", -1)
+            col = kwargs.get("col", -1)
+        else:
+            line, col, _ = handler.position()
+
+        if value is None:
+            token = Token(category, type, type.value, line, col)
+        else:
+            token = Token(category, type, value, line, col)
+
+        return token
+
 
 class StringNormalizer:
     """
@@ -7,6 +68,7 @@ class StringNormalizer:
     It takes a string input, normalizes it spaces and newlines,
     It also preserves strings inside a string.
     """
+
     def __init__(self, text: str):
         self.program = text
 
@@ -18,23 +80,23 @@ class StringNormalizer:
         - Format chars (like zero-width space)
         - Line/paragraph separators
         """
-        return ''.join(ch for ch in s if unicodedata.category(ch)[0] != 'C')
+        return "".join(ch for ch in s if unicodedata.category(ch)[0] != "C")
 
     def _collapse_whitespace(self, s: str) -> str:
         """
         Collapse all whitespace (including tabs, newlines, NBSP) into a single space.
         """
-        return re.sub(r'\s+', ' ', s)
+        return re.sub(r"\s+", " ", s)
 
     def _remove_newline_tabline(self, s: str):
-        return re.sub(r'\n+', '', re.sub(r'\t+', '', s))
+        return re.sub(r"\n+", "", re.sub(r"\t+", "", s))
 
     def _remove_whitespaces(self, s: str):
         """
         Remove all whitespace entirely.
         """
-        return re.sub(r'\s+', '', s)
-    
+        return re.sub(r"\s+", "", s)
+
     def _extract_string_mappings(self, s: str) -> dict:
         """
         Extract quoted strings and replace them with placeholders.
@@ -48,8 +110,8 @@ class StringNormalizer:
 
         for ch in s:
             if ch == '"':
-                if is_string: # closing string
-                    actual_str = ''.join(temp_str)
+                if is_string:  # closing string
+                    actual_str = "".join(temp_str)
                     placeholder = f"__STR_{placeholder_count}__"
                     string_mapping[placeholder] = f'"{actual_str}"'
                     result.append(placeholder)
@@ -62,7 +124,7 @@ class StringNormalizer:
                 else:
                     result.append(ch)
 
-        return ''.join(result), string_mapping
+        return "".join(result), string_mapping
 
     def _restore_strings(self, s: str, mapping: dict) -> str:
         """Restore placeholders with original strings."""
@@ -71,10 +133,10 @@ class StringNormalizer:
         return s
 
     def normalize(
-        self, 
+        self,
         remove_spaces: bool = False,
         remove_controls: bool = False,
-        prevent_nested: bool = True
+        prevent_nested: bool = True,
     ) -> str:
         """
         Normalizes the string.
@@ -90,7 +152,7 @@ class StringNormalizer:
             s, mapping = self._extract_string_mappings(s)
 
         s = self._collapse_whitespace(s)
-        
+
         if remove_controls:
             s = self._remove_control_characters(s)
             s = self._remove_newline_tabline(s)
