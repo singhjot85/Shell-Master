@@ -46,7 +46,7 @@ class JQUtils:
         else:
             line, col, _ = handler.position()
 
-        if not value:
+        if value is None:
             token = Token(category, type, type.value, line, col)
         else:
             token = Token(category, type, value, line, col)

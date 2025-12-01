@@ -45,15 +45,15 @@ COMPLETE_PROGRAMS = {
     "COMPLETE_PROGRAM_2": """def addmul(a; b): (a + b) * (a - b); ("12") as $input | $input | addmul(5; .value) | {result: ., double: (. * 2)}""",
     "COMPLETE_PROGRAM_3": """if .age >= 18 then "adult" elif .age >= 13 then "teenager" else "child" end""",
     "COMPLETE_PROGRAM_4": """.people[] | select(.active == true) | {name, emails: [.contacts[]?.email // "unknown"]}""",
-    "COMPLETE_PROGRAM_5": """def greet(name): "Hello, \(name)! Today is \(now | strftime("%A"))."; greet(.username)"""
+    "COMPLETE_PROGRAM_5": """def greet(name): "Hello, \(name)! Today is \(now | strftime("%A"))."; greet(.username)""",
+    "COMPLETE_PROGRAM_6": """
+reduce range(0; 10) as $i (0;
+. + (if ($i % 2 == 0) then $i else 0 end)
+)
+| select(. > 10 and . < 30)
+"""
 }
-# TODO: Handle cases where numbers are directly present in program. Ex: 0, -2.3
-# COMPLETE_PROGRAM_6 = """
-# reduce range(0; 10) as $i (0;
-#   . + (if ($i % 2 == 0) then $i else 0 end)
-# )
-# | select(. > 10 and . < 30)
-# """
+
 
 # Using print statement ouptut as writing entire token stream is painful
 COMPLETE_PROGRAMS_RESULTS = { 
@@ -61,5 +61,6 @@ COMPLETE_PROGRAMS_RESULTS = {
     "COMPLETE_PROGRAM_2": """[<Token DEF - 'def'>, <Token Identifiers - 'addmul'>, <Token OPEN_PARENTHESIS - '('>, <Token Identifiers - 'a'>, <Token SEMI_COLON - ';'>, <Token Identifiers - 'b'>, <Token CLOSE_PARENTHESIS - ')'>, <Token OPEN_PARENTHESIS - '('>, <Token Identifiers - 'a'>, <Token ADDITION - '+'>, <Token Identifiers - 'b'>, <Token CLOSE_PARENTHESIS - ')'>, <Token MULTIPLICATION - '*'>, <Token OPEN_PARENTHESIS - '('>, <Token Identifiers - 'a'>, <Token SUBTRACTION - '-'>, <Token Identifiers - 'b'>, <Token CLOSE_PARENTHESIS - ')'>, <Token SEMI_COLON - ';'>, <Token OPEN_PARENTHESIS - '('>, <Token STRING - '"12"'>, <Token CLOSE_PARENTHESIS - ')'>, <Token AS - 'as'>, <Token VARIAVBLE - '$input'>, <Token PIPE - '|'>, <Token VARIAVBLE - '$input'>, <Token PIPE - '|'>, <Token Identifiers - 'addmul'>, <Token OPEN_PARENTHESIS - '('>, <Token number - '5'>, <Token SEMI_COLON - ';'>, <Token access_variable - '.value'>, <Token CLOSE_PARENTHESIS - ')'>, <Token PIPE - '|'>, <Token OPEN_CURLY_BRAKET - '{'>, <Token mapping_key - 'result:'>, <Token access_variable - '.,'>, <Token mapping_key - 'double:'>, <Token OPEN_PARENTHESIS - '('>, <Token access_variable - '. '>, <Token MULTIPLICATION - '*'>, <Token number - '2'>, <Token CLOSE_PARENTHESIS - ')'>, <Token CLOSE_CURLY_BRAKET - '}'>]""",
     "COMPLETE_PROGRAM_3": """[<Token IF - 'if'>, <Token access_variable - '.age'>, <Token GREATER_THAN_EQUAL - '>='>, <Token number - '18'>, <Token THEN - 'then'>, <Token STRING - '"adult"'>, <Token ELIL - 'elif'>, <Token access_variable - '.age'>, <Token GREATER_THAN_EQUAL - '>='>, <Token number - '13'>, <Token THEN - 'then'>, <Token STRING - '"teenager"'>, <Token ELSE - 'else'>, <Token STRING - '"child"'>, <Token END - 'end'>]""",
     "COMPLETE_PROGRAM_4": """[<Token access_variable - '.people'>, <Token OPEN_SQUARE_BRACKET - '['>, <Token CLOSE_SQUARE_BRACKET - ']'>, <Token PIPE - '|'>, <Token Identifiers - 'select'>, <Token OPEN_PARENTHESIS - '('>, <Token access_variable - '.active'>, <Token EQUALS - '=='>, <Token Identifiers - 'true'>, <Token CLOSE_PARENTHESIS - ')'>, <Token PIPE - '|'>, <Token OPEN_CURLY_BRAKET - '{'>, <Token Identifiers - 'name'>, <Token COMMA - ','>, <Token mapping_key - 'emails:'>, <Token OPEN_SQUARE_BRACKET - '['>, <Token access_variable - '.contacts'>, <Token OPEN_SQUARE_BRACKET - '['>, <Token CLOSE_SQUARE_BRACKET - ']'>, <Token QUESTION_MARK - '?'>, <Token access_variable - '.email'>, <Token DIVISION - '/'>, <Token DIVISION - '/'>, <Token STRING - '"unknown"'>, <Token CLOSE_SQUARE_BRACKET - ']'>, <Token CLOSE_CURLY_BRAKET - '}'>]""",
-    "COMPLETE_PROGRAM_5": """[<Token DEF - 'def'>, <Token Identifiers - 'greet'>, <Token OPEN_PARENTHESIS - '('>, <Token Identifiers - 'name'>, <Token CLOSE_PARENTHESIS - ')'>, <Token STRING - '"Hello, name)! Today is now | strftime("'>, <Token MODULUS - '%'>, <Token Identifiers - 'A'>, <Token STRING - '"))."'>, <Token SEMI_COLON - ';'>, <Token Identifiers - 'greet'>, <Token OPEN_PARENTHESIS - '('>, <Token access_variable - '.username'>, <Token CLOSE_PARENTHESIS - ')'>]"""
+    "COMPLETE_PROGRAM_5": """[<Token DEF - 'def'>, <Token Identifiers - 'greet'>, <Token OPEN_PARENTHESIS - '('>, <Token Identifiers - 'name'>, <Token CLOSE_PARENTHESIS - ')'>, <Token STRING - '"Hello, name)! Today is now | strftime("'>, <Token MODULUS - '%'>, <Token Identifiers - 'A'>, <Token STRING - '"))."'>, <Token SEMI_COLON - ';'>, <Token Identifiers - 'greet'>, <Token OPEN_PARENTHESIS - '('>, <Token access_variable - '.username'>, <Token CLOSE_PARENTHESIS - ')'>]""",
+    "COMPLETE_PROGRAM_6": """[<Token REDUCE - 'reduce'>, <Token Identifiers - 'range'>, <Token OPEN_PARENTHESIS - '('>, <Token number - '0'>, <Token SEMI_COLON - ';'>, <Token number - '10'>, <Token CLOSE_PARENTHESIS - ')'>, <Token AS - 'as'>, <Token VARIAVBLE - '$i'>, <Token OPEN_PARENTHESIS - '('>, <Token number - '0'>, <Token SEMI_COLON - ';'>, <Token access_variable - '. '>, <Token ADDITION - '+'>, <Token OPEN_PARENTHESIS - '('>, <Token IF - 'if'>, <Token OPEN_PARENTHESIS - '('>, <Token VARIAVBLE - '$i'>, <Token MODULUS - '%'>, <Token number - '2'>, <Token EQUALS - '=='>, <Token number - '0'>, <Token CLOSE_PARENTHESIS - ')'>, <Token THEN - 'then'>, <Token VARIAVBLE - '$i'>, <Token ELSE - 'else'>, <Token number - '0'>, <Token END - 'end'>, <Token CLOSE_PARENTHESIS - ')'>, <Token CLOSE_PARENTHESIS - ')'>, <Token PIPE - '|'>, <Token Identifiers - 'select'>, <Token OPEN_PARENTHESIS - '('>, <Token access_variable - '. '>, <Token GREATER_THAN - '>'>, <Token number - '10'>, <Token AND - 'and'>, <Token access_variable - '. '>, <Token LESS_THAN - '<'>, <Token number - '30'>, <Token CLOSE_PARENTHESIS - ')'>]"""
 }
