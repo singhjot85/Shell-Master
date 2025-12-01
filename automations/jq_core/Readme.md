@@ -51,7 +51,7 @@ jq_core/
 
 1. Implement a Pratt parser (top-down operator precedence).
     - Why Pratt? jq is expression-heavy with lots of infix/postfix operators; Pratt is flexible.
-    - Alternatives: 
+    - Alternatives:
         - Recursive descent (works, but precedence handling is painful).
         - Parser generators (ANTLR, Lark, Bison) are more automatic, less learning by hand.
     - Pratt is used: JavaScript parsers, expression evaluators in many DSLs.
