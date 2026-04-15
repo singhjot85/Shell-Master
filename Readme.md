@@ -1,51 +1,51 @@
-Design:
+# jqtools
 
-- Use an abstract InputSource (string, bytes, byte-stream).
-    - String Input
-    - Bytes Input
-    - Byte-Stream Input (for scale)
-- Design a position-aware lexer
-    - Token type
-    - Start + end positions (line, column)
-    - Raw lexeme
-    - Token category (operator, identifier, literal, pipe, filter, etc.)
-- Implement recursive descent parser with jq’s precedence model
-- Build AST nodes with complete source-span metadata
-    - Preserve comments + whitespace in a “trivia” structure
+`jqtools` is a compiler-first project for building jq automation tooling.
 
-1. Debugger
-    - Instrumentation around AST eval
-    - Structured error handling
-2. Formatter
-    - AST visitor → pretty-printer, not regex or string hacks
+## Layers
 
-This design can easily scale into:
-- LSP server (syntax highlighting + jump to definition)
-- auto-completion tools
-- jq refactoring tools
+- Core compiler: position-aware lexer plus a top-down Pratt parser
+- Tooling layer: formatter and structural debugger built on compiler output
+- Interface layer: a CLI today, with room for APIs, editors, and automation integrations
 
+## Project layout
 
-To-do list:
-- [ ] jq grammar (complete formal grammar)
-- [ ] AST class definitions (Python, TS, Go)
-- [ ] Lexer implementation blueprint
-- [ ] Error-handling architecture (panic mode, LL recovery)
-- [ ] Prototype of a jq debugger (pseudo-code)
-- [ ] Formatter visitor template
+```text
+src/jqtools/
+  compiler/
+  tooling/
+  cli.py
+automations/
+docs/
+examples/
+tests/
+```
 
-Progress Tracker:
-- [X] Handlers
-    - [ ] Tests
-- [ ] Lexer
-    - [ ] Proper tokentype/ category
-    - [ ] Proper raw lexeme data
-    - [ ] Proper lexeme position
-    - [ ] Tests
-- [ ] Parser
-    - [ ] Grammar
-    - [ ] Proper AST nodes
-    - [ ] AST Structure
-    - [ ] Tests
-- [ ] Debugger
-- [ ] Formatter
-- [ ] Auto-complete
+## Quick start
+
+```bash
+poetry install
+poetry run jqtools tokenize ".name | {greeting: \"hi\"}"
+poetry run jqtools parse ".people[] | select(.active)"
+poetry run jqtools format "{name:.user,items:[1,2,3]}"
+poetry run jqtools debug "if .age >= 18 then \"adult\" else \"child\" end"
+```
+
+## Python usage
+
+```python
+from jqtools import JQCompiler, JQDebugger, JQFormatter
+
+compiler = JQCompiler()
+result = compiler.compile(".people[] | {name: .name}")
+
+print(result.tokens)
+print(JQFormatter().render_program(result.ast))
+print(JQDebugger().trace(".people[] | .name").ast_summary)
+```
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [How It Works](docs/how-it-works.md)
+- [Example usage](examples/basic_usage.py)

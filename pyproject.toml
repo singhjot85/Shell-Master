@@ -1,13 +1,14 @@
 [project]
-name = "automations"
+name = "jqtools"
 version = "0.1.0"
-description = ""
+description = "Compiler-first jq tooling with formatter and debugger foundations."
 authors = []
-readme = "README.md"
+readme = "Readme.md"
 requires-python = ">=3.12"
-dependencies = ["pytest (>=8.4.2,<9.0.0)"]
+dependencies = []
 
 [tool.poetry]
+packages = [{ include = "jqtools", from = "src" }]
 
 [tool.poetry.group.dev.dependencies]
 jq = "^1.10.0"
@@ -23,6 +24,7 @@ pre-commit = "^4.3.0"
 
 [tool.poetry.scripts]
 jqtools = "jqtools.cli:main"
+automations = "jqtools.cli:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
