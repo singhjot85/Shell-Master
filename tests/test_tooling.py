@@ -1,6 +1,6 @@
 """Tests for formatter and debugger layers."""
 
-from jqtools import FormatterRules, JQDebugger, JQFormatter
+from jqtools import DebugMode, FormatterRules, JQDebugger, JQFormatter
 
 
 def test_formatter_renders_supported_subset():
@@ -66,5 +66,21 @@ def test_formatter_rules_allow_custom_indent_and_compactness():
 
 def test_debugger_emits_trace():
     trace = JQDebugger().trace(".name | length")
+    assert trace.ok is True
     assert any("PIPE" in item for item in trace.token_summary)
     assert any("Program" in item for item in trace.ast_summary)
+
+
+def test_debugger_reports_parser_failure_location():
+    report = JQDebugger().debug("def add(a; b):\n", mode=DebugMode.FAILURE_ONLY)
+    assert report.ok is False
+    assert report.failure is not None
+    assert report.failure.snippet.line == 1
+    assert report.failure.message
+
+
+def test_debugger_detailed_mode_returns_frames():
+    report = JQDebugger().debug(".name | length", mode=DebugMode.DETAILED)
+    assert report.ok is True
+    assert report.frames
+    assert report.frames[0].snippet.expression

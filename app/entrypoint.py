@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
+from app.services.jq_debugger_service import JQDebuggerService
 from app.services.jq_formatter_service import JQFormatterService
 
 
@@ -21,12 +22,21 @@ app = FastAPI(title="jqtools UI")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 formatter_service = JQFormatterService()
+debugger_service = JQDebuggerService()
 
 
 class FormatRequest(BaseModel):
     """Request payload for jq formatting."""
 
     source: str = Field(default="", description="Raw jq source to format.")
+
+
+class DebugRequest(BaseModel):
+    """Request payload for jq debugging."""
+
+    source: str = Field(default="", description="Raw jq source to debug.")
+    input_json: str = Field(default="", description="Optional input JSON used during debugging.")
+    mode: str = Field(default="failure_only", description="Debugger mode.")
 
 
 @app.get("/")
@@ -47,9 +57,9 @@ async def index(request: Request):
             },
             {
                 "title": "Debugger",
-                "description": "Planned next: token and AST views powered by the same compiler service.",
-                "href": "#",
-                "tag": "Planned",
+                "description": "Inspect parse failures, trace frames, and compiler context from the same tooling layer.",
+                "href": "/jq-debugger",
+                "tag": "Ready",
             },
         ],
     }
@@ -68,6 +78,19 @@ async def jq_formatter_page(request: Request):
     return templates.TemplateResponse(request, "jq_formatter.html", {"context": context})
 
 
+@app.get("/jq-debugger")
+async def jq_debugger_page(request: Request):
+    """Render the jq debugger page."""
+
+    context = {
+        "title": "JQ Debugger",
+        "active_page": "debugger",
+        "sample_input": '.[] as $item | . + $item',
+        "sample_json": '[1, 2, 3]',
+    }
+    return templates.TemplateResponse(request, "jq_debugger.html", {"context": context})
+
+
 @app.post("/api/jq/format")
 async def format_jq(payload: FormatRequest):
     """Format jq through the core formatting service."""
@@ -83,3 +106,11 @@ async def format_jq(payload: FormatRequest):
             "error": result.error,
         },
     )
+
+
+@app.post("/api/jq/debug")
+async def debug_jq(payload: DebugRequest):
+    """Debug jq through the structured debugger service."""
+
+    result = debugger_service.debug_jq(payload.source, payload.input_json, payload.mode)
+    return JSONResponse(status_code=result.status_code, content=result.payload)

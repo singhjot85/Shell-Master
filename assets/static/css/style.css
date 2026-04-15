@@ -1,34 +1,68 @@
 :root {
-    --app-bg: #f6f1e8;
-    --app-panel: rgba(255, 252, 245, 0.82);
-    --app-ink: #1d1a16;
-    --app-muted: #6b6259;
-    --app-accent: #b95c38;
-    --app-accent-dark: #923f1f;
-    --app-border: rgba(29, 26, 22, 0.08);
-    --app-shadow: 0 24px 80px rgba(79, 52, 33, 0.12);
+    --app-bg: #f3efe7;
+    --app-bg-accent-a: rgba(236, 166, 91, 0.32);
+    --app-bg-accent-b: rgba(38, 122, 145, 0.16);
+    --app-grid: rgba(255, 255, 255, 0.24);
+    --app-panel: rgba(255, 251, 244, 0.82);
+    --app-ink: #191714;
+    --app-muted: #6d675f;
+    --app-accent: #cf5a2d;
+    --app-accent-dark: #9f3d1a;
+    --app-accent-soft: rgba(207, 90, 45, 0.12);
+    --app-secondary: #1f6f86;
+    --app-secondary-soft: rgba(31, 111, 134, 0.12);
+    --app-border: rgba(25, 23, 20, 0.08);
+    --app-shadow: 0 24px 80px rgba(66, 46, 31, 0.12);
+    --app-code-bg: #221c18;
+    --app-code-ink: #f9f1e7;
+    --app-input-bg: rgba(255, 255, 255, 0.74);
+    --app-output-bg: #221c18;
+    --app-output-placeholder: rgba(249, 241, 231, 0.58);
     --app-radius-xl: 2rem;
     --app-radius-lg: 1.5rem;
     --app-font-display: "Georgia", "Times New Roman", serif;
     --app-font-body: "Segoe UI", sans-serif;
 }
 
+body[data-theme="dark"] {
+    --app-bg: #0f1418;
+    --app-bg-accent-a: rgba(207, 90, 45, 0.18);
+    --app-bg-accent-b: rgba(64, 175, 206, 0.16);
+    --app-grid: rgba(255, 255, 255, 0.06);
+    --app-panel: rgba(18, 25, 31, 0.84);
+    --app-ink: #eef1f3;
+    --app-muted: #a7b0b8;
+    --app-accent: #ff8b5e;
+    --app-accent-dark: #ffb08d;
+    --app-accent-soft: rgba(255, 139, 94, 0.15);
+    --app-secondary: #58bddf;
+    --app-secondary-soft: rgba(88, 189, 223, 0.14);
+    --app-border: rgba(255, 255, 255, 0.08);
+    --app-shadow: 0 28px 90px rgba(0, 0, 0, 0.35);
+    --app-code-bg: #091117;
+    --app-code-ink: #f3f7fa;
+    --app-input-bg: rgba(10, 18, 24, 0.7);
+    --app-output-bg: #081016;
+    --app-output-placeholder: rgba(243, 247, 250, 0.45);
+}
+
 body.app-shell {
     background:
-        radial-gradient(circle at top left, rgba(239, 180, 113, 0.28), transparent 30%),
-        radial-gradient(circle at bottom right, rgba(185, 92, 56, 0.2), transparent 28%),
+        radial-gradient(circle at top left, var(--app-bg-accent-a), transparent 30%),
+        radial-gradient(circle at bottom right, var(--app-bg-accent-b), transparent 28%),
         var(--app-bg);
     color: var(--app-ink);
     font-family: var(--app-font-body);
     min-height: 100vh;
+    transition: background-color 180ms ease, color 180ms ease;
 }
 
 .app-backdrop {
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background-image: linear-gradient(rgba(255,255,255,0.25) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.25) 1px, transparent 1px);
+    background-image: linear-gradient(var(--app-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--app-grid) 1px, transparent 1px);
     background-size: 26px 26px;
     mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent 85%);
 }
@@ -90,13 +124,28 @@ body.app-shell {
     border-color: var(--app-accent-dark);
 }
 
+.btn-outline-dark,
+.btn-outline-secondary {
+    border-color: var(--app-border);
+    color: var(--app-ink);
+}
+
+.btn-outline-dark:hover,
+.btn-outline-dark:focus,
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+    background: var(--app-secondary-soft);
+    border-color: rgba(0, 0, 0, 0);
+    color: var(--app-ink);
+}
+
 .hero-panel {
     overflow: hidden;
 }
 
 .code-preview {
-    background: #241c18;
-    color: #f7efe4;
+    background: var(--app-code-bg);
+    color: var(--app-code-ink);
     min-height: 100%;
 }
 
@@ -114,8 +163,8 @@ body.app-shell {
     min-height: 24rem;
     width: 100%;
     border-radius: 1.2rem;
-    border: 1px solid rgba(29, 26, 22, 0.12);
-    background: rgba(255, 255, 255, 0.68);
+    border: 1px solid var(--app-border);
+    background: var(--app-input-bg);
     color: var(--app-ink);
     font-family: "Consolas", "Courier New", monospace;
     font-size: 0.95rem;
@@ -130,13 +179,13 @@ body.app-shell {
 }
 
 .jq-editor:focus {
-    border-color: rgba(185, 92, 56, 0.5);
-    box-shadow: 0 0 0 0.2rem rgba(185, 92, 56, 0.12);
+    border-color: color-mix(in srgb, var(--app-accent) 50%, transparent);
+    box-shadow: 0 0 0 0.2rem var(--app-accent-soft);
 }
 
 .output-box {
-    background: rgba(36, 28, 24, 0.94);
-    color: #f7efe4;
+    background: var(--app-output-bg);
+    color: var(--app-code-ink);
     flex: 1 1 auto;
 }
 
@@ -146,11 +195,127 @@ body.app-shell {
 }
 
 .output-box::placeholder {
-    color: rgba(247, 239, 228, 0.58);
+    color: var(--app-output-placeholder);
+}
+
+.theme-toggle {
+    border: 1px solid var(--app-border);
+    background: linear-gradient(135deg, var(--app-accent-soft), var(--app-secondary-soft));
+    color: var(--app-ink);
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.theme-toggle:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--app-accent) 35%, var(--app-border));
+}
+
+.theme-toggle-icon {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.text-secondary {
+    color: var(--app-muted) !important;
 }
 
 .page-heading {
     max-width: 42rem;
+}
+
+.debug-summary,
+.trace-stack {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.debug-card,
+.trace-frame,
+.report-box {
+    border: 1px solid var(--app-border);
+    background: var(--app-input-bg);
+    border-radius: 1rem;
+    padding: 1rem 1.05rem;
+}
+
+.debug-label {
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--app-muted);
+    margin-bottom: 0.45rem;
+    font-weight: 700;
+}
+
+.debug-value {
+    color: var(--app-ink);
+    line-height: 1.55;
+}
+
+.debug-inline-code,
+.report-box {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--app-ink);
+    background: var(--app-output-bg);
+    color: var(--app-code-ink);
+    overflow: auto;
+}
+
+.trace-frame {
+    display: grid;
+    grid-template-columns: 2.75rem 1fr;
+    gap: 0.95rem;
+    align-items: start;
+}
+
+.trace-index {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--app-accent-soft), var(--app-secondary-soft));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: var(--app-ink);
+}
+
+.trace-meta {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 0.45rem;
+}
+
+.trace-location {
+    color: var(--app-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.65rem;
+}
+
+.empty-state {
+    border: 1px dashed var(--app-border);
+    border-radius: 1rem;
+    padding: 1rem 1.05rem;
+    color: var(--app-muted);
+    background: color-mix(in srgb, var(--app-panel) 78%, transparent);
 }
 
 @media (max-width: 991.98px) {
@@ -162,5 +327,9 @@ body.app-shell {
 
     .jq-editor {
         min-height: 18rem;
+    }
+
+    .trace-frame {
+        grid-template-columns: 1fr;
     }
 }

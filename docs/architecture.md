@@ -20,7 +20,7 @@ The core owns:
 The second layer consumes compiler output instead of reparsing strings:
 
 - `JQFormatter` renders the AST back into readable jq
-- `JQDebugger` exposes token and AST traces
+- `JQDebugger` exposes structured debug reports, trace frames, and runtime-adapter hooks
 
 ## Interface layer
 
