@@ -1,6 +1,7 @@
 {
     "jq.lsp.enabled": true,
     "jq.lsp.path": "jq-lsp",
-    "python.defaultInterpreterPath": "/Users/gurjot.singh/Library/Caches/pypoetry/virtualenvs/automations-TXRWPF5O-py3.13/bin/python",
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python.defaultInterpreterPath": "C:\\Users\\SinghJot\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\automations-iF71CK2d-py3.12\\Scripts\\python.exe",
     "python.terminal.activateEnvironment": true,
 }
