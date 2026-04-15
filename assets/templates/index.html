@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container pb-5">
+    <div class="hero-panel rounded-5 p-5 mb-5">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <span class="eyebrow">Jinja + FastAPI + Compiler Core</span>
+                <h1 class="display-5 fw-semibold mt-3">{{ context.hero_title }}</h1>
+                <p class="lead text-secondary mt-3 mb-4">{{ context.hero_description }}</p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a class="btn btn-primary btn-lg px-4" href="/jq-formatter">Open Formatter</a>
+                    <a class="btn btn-outline-dark btn-lg px-4" href="https://jqlang.org/" target="_blank" rel="noreferrer">Learn jq</a>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="code-preview rounded-4 p-4">
+<pre class="mb-0"><code>.people[]
+| select(.active == true)
+| {
+    name: .name,
+    emails: [.email, "unknown"]
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {% for card in context.tool_cards %}
+        <div class="col-md-6">
+            <article class="tool-card h-100 rounded-4 p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h2 class="h4 mb-0">{{ card.title }}</h2>
+                    <span class="badge text-bg-light">{{ card.tag }}</span>
+                </div>
+                <p class="text-secondary mb-4">{{ card.description }}</p>
+                {% if card.href != "#" %}
+                    <a class="btn btn-dark" href="{{ card.href }}">Open</a>
+                {% else %}
+                    <button class="btn btn-outline-secondary" type="button" disabled>Coming Soon</button>
+                {% endif %}
+            </article>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

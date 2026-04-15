@@ -1,0 +1,8 @@
+<label class="form-label visually-hidden" for="jq-source">JQ Source</label>
+<textarea
+    class="form-control jq-editor input-box"
+    id="jq-source"
+    rows="18"
+    spellcheck="false"
+    placeholder="Paste jq here..."
+>{{ context.sample_input | default('') }}</textarea>

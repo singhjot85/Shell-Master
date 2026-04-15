@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container pb-5">
+    <div class="page-heading mb-4">
+        <span class="eyebrow">Tool</span>
+        <h1 class="display-6 fw-semibold mt-2">JQ Debugger</h1>
+        <p class="text-secondary mb-0">Inspect jq failures, trace frames, and compiler context through a debugger-friendly API.</p>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-7">
+            <section class="tool-panel rounded-4 p-4 h-100 formatter-panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">JQ Source</h2>
+                    <button class="btn btn-outline-secondary btn-sm" id="debug-load-sample" type="button">Load Sample</button>
+                </div>
+                <label class="form-label visually-hidden" for="debug-jq-source">JQ Source</label>
+                <textarea
+                    class="form-control jq-editor input-box"
+                    id="debug-jq-source"
+                    rows="16"
+                    spellcheck="false"
+                    placeholder="Paste jq to debug..."
+                >{{ context.sample_input }}</textarea>
+            </section>
+        </div>
+        <div class="col-xl-5">
+            <section class="tool-panel rounded-4 p-4 h-100 formatter-panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">Input JSON</h2>
+                    <button class="btn btn-outline-secondary btn-sm" id="debug-load-json" type="button">Load JSON</button>
+                </div>
+                <label class="form-label visually-hidden" for="debug-input-json">Input JSON</label>
+                <textarea
+                    class="form-control jq-editor input-box"
+                    id="debug-input-json"
+                    rows="16"
+                    spellcheck="false"
+                    placeholder="Optional input JSON for runtime-aware debugging..."
+                >{{ context.sample_json }}</textarea>
+            </section>
+        </div>
+    </div>
+
+    <section class="tool-panel rounded-4 p-4 mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label" for="debug-mode">Debugger Mode</label>
+                <select class="form-select" id="debug-mode">
+                    <option value="failure_only" selected>Failure Trace Only</option>
+                    <option value="detailed">Detailed</option>
+                </select>
+            </div>
+            <div class="col-md-8">
+                <div class="d-flex flex-wrap gap-2">
+                    {% with button_id="debug-button", button_label="Run Debugger", button_variant="primary" %}
+                        {% include "components/button.html" %}
+                    {% endwith %}
+                    <button class="btn btn-outline-dark" id="debug-clear" type="button">Clear Results</button>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-danger mt-3 d-none" id="debug-error-box" role="alert"></div>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-xl-5">
+            <section class="tool-panel rounded-4 p-4 h-100">
+                <h2 class="h5 mb-3">Failure Summary</h2>
+                <div class="debug-summary d-grid gap-3" id="debug-summary">
+                    <div class="empty-state">No debugger output yet.</div>
+                </div>
+            </section>
+        </div>
+        <div class="col-xl-7">
+            <section class="tool-panel rounded-4 p-4 h-100">
+                <h2 class="h5 mb-3">Execution Trace</h2>
+                <div class="trace-stack" id="debug-trace">
+                    <div class="empty-state">Trace frames will appear here.</div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-xl-6">
+            <section class="tool-panel rounded-4 p-4 h-100">
+                <h2 class="h5 mb-3">Token Summary</h2>
+                <pre class="report-box mb-0" id="debug-tokens">No tokens yet.</pre>
+            </section>
+        </div>
+        <div class="col-xl-6">
+            <section class="tool-panel rounded-4 p-4 h-100">
+                <h2 class="h5 mb-3">AST Summary</h2>
+                <pre class="report-box mb-0" id="debug-ast">No AST summary yet.</pre>
+            </section>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const debugSource = document.getElementById("debug-jq-source");
+    const debugJson = document.getElementById("debug-input-json");
+    const debugMode = document.getElementById("debug-mode");
+    const debugButton = document.getElementById("debug-button");
+    const debugErrorBox = document.getElementById("debug-error-box");
+    const debugSummary = document.getElementById("debug-summary");
+    const debugTrace = document.getElementById("debug-trace");
+    const debugTokens = document.getElementById("debug-tokens");
+    const debugAst = document.getElementById("debug-ast");
+    const sampleJq = {{ context.sample_input | tojson }};
+    const sampleJson = {{ context.sample_json | tojson }};
+
+    document.getElementById("debug-load-sample").addEventListener("click", () => {
+        debugSource.value = sampleJq;
+    });
+
+    document.getElementById("debug-load-json").addEventListener("click", () => {
+        debugJson.value = sampleJson;
+    });
+
+    document.getElementById("debug-clear").addEventListener("click", () => {
+        debugErrorBox.classList.add("d-none");
+        debugErrorBox.textContent = "";
+        debugSummary.innerHTML = '<div class="empty-state">No debugger output yet.</div>';
+        debugTrace.innerHTML = '<div class="empty-state">Trace frames will appear here.</div>';
+        debugTokens.textContent = "No tokens yet.";
+        debugAst.textContent = "No AST summary yet.";
+    });
+
+    debugButton.addEventListener("click", async () => {
+        const source = debugSource.value.trim();
+        if (!source) {
+            showDebugError("Enter some jq before running the debugger.");
+            return;
+        }
+
+        showDebugLoading();
+        debugButton.disabled = true;
+        debugButton.textContent = "Debugging...";
+
+        try {
+            const response = await fetch("/api/jq/debug", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    source,
+                    input_json: debugJson.value,
+                    mode: debugMode.value
+                })
+            });
+
+            const payload = await response.json();
+            renderDebugPayload(payload);
+        } catch (error) {
+            showDebugError("Could not reach the debugger service.");
+        } finally {
+            debugButton.disabled = false;
+            debugButton.textContent = "Run Debugger";
+        }
+    });
+
+    function showDebugError(message) {
+        debugErrorBox.textContent = message;
+        debugErrorBox.classList.remove("d-none");
+    }
+
+    function hideDebugError() {
+        debugErrorBox.textContent = "";
+        debugErrorBox.classList.add("d-none");
+    }
+
+    function showDebugLoading() {
+        hideDebugError();
+        debugSummary.innerHTML = '<div class="empty-state">Running debugger...</div>';
+        debugTrace.innerHTML = '<div class="empty-state">Collecting trace...</div>';
+        debugTokens.textContent = "Collecting tokens...";
+        debugAst.textContent = "Collecting AST summary...";
+    }
+
+    function renderDebugPayload(payload) {
+        if (!payload.ok && payload.failure?.message) {
+            showDebugError(payload.failure.message);
+        } else {
+            hideDebugError();
+        }
+
+        debugTokens.textContent = (payload.token_summary || []).join("\n") || "No tokens available.";
+        debugAst.textContent = (payload.ast_summary || []).join("\n") || "No AST summary available.";
+
+        renderSummary(payload);
+        renderTrace(payload.failure?.execution_trace || payload.frames || []);
+    }
+
+    function renderSummary(payload) {
+        const failure = payload.failure;
+        if (!failure) {
+            debugSummary.innerHTML = `
+                <div class="debug-card">
+                    <div class="debug-label">Status</div>
+                    <div class="debug-value text-success">No failure reported</div>
+                </div>
+                <div class="debug-card">
+                    <div class="debug-label">Mode</div>
+                    <div class="debug-value">${payload.mode || "failure_only"}</div>
+                </div>
+            `;
+            return;
+        }
+
+        const snippet = failure.snippet;
+        const location = snippet ? `Line ${snippet.line}, Col ${snippet.column}` : "Unknown";
+        const expression = snippet?.expression || "Unavailable";
+        const sourceLine = snippet?.source_line || "";
+        const cascade = failure.cascading ? "Yes" : "No";
+        const context = failure.input_context ? escapeHtml(JSON.stringify(failure.input_context, null, 2)) : "Not captured";
+
+        debugSummary.innerHTML = `
+            <div class="debug-card">
+                <div class="debug-label">Failure</div>
+                <div class="debug-value">${escapeHtml(failure.message)}</div>
+            </div>
+            <div class="debug-card">
+                <div class="debug-label">Location</div>
+                <div class="debug-value">${location}</div>
+            </div>
+            <div class="debug-card">
+                <div class="debug-label">Expression</div>
+                <pre class="debug-inline-code mb-0">${escapeHtml(expression)}</pre>
+            </div>
+            <div class="debug-card">
+                <div class="debug-label">Source Line</div>
+                <pre class="debug-inline-code mb-0">${escapeHtml(sourceLine)}</pre>
+            </div>
+            <div class="debug-card">
+                <div class="debug-label">Cascading</div>
+                <div class="debug-value">${cascade}</div>
+            </div>
+            <div class="debug-card">
+                <div class="debug-label">Input Context</div>
+                <pre class="debug-inline-code mb-0">${context}</pre>
+            </div>
+        `;
+    }
+
+    function renderTrace(frames) {
+        if (!frames.length) {
+            debugTrace.innerHTML = '<div class="empty-state">No trace frames available.</div>';
+            return;
+        }
+
+        debugTrace.innerHTML = frames.map((frame, index) => {
+            const context = frame.input_context
+                ? `<pre class="debug-inline-code mt-2 mb-0">${escapeHtml(JSON.stringify(frame.input_context, null, 2))}</pre>`
+                : "";
+
+            return `
+                <article class="trace-frame">
+                    <div class="trace-index">${index + 1}</div>
+                    <div class="trace-body">
+                        <div class="trace-meta">
+                            <span class="badge text-bg-light">${escapeHtml(frame.phase || "frame")}</span>
+                            <span>${escapeHtml(frame.note || "")}</span>
+                        </div>
+                        <div class="trace-location">Line ${frame.snippet.line}, Col ${frame.snippet.column}</div>
+                        <pre class="debug-inline-code">${escapeHtml(frame.snippet.expression || frame.snippet.source_line || "")}</pre>
+                        ${context}
+                    </div>
+                </article>
+            `;
+        }).join("");
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;");
+    }
+</script>
+{% endblock %}
