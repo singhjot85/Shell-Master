@@ -48,4 +48,6 @@ print(JQDebugger().trace(".people[] | .name").ast_summary)
 
 - [Architecture](docs/architecture.md)
 - [How It Works](docs/how-it-works.md)
+- [Formatter Internals](docs/formatter-how-it-works.md)
+- [Tweaking Pretty-Printing](docs/tweaking-pretty-printing.md)
 - [Example usage](examples/basic_usage.py)

@@ -22,6 +22,7 @@ class Node:
 @dataclass(slots=True)
 class Program(Node):
     expression: "Expression"
+    definitions: list["FunctionDefinition"] = field(default_factory=list)
 
 
 class Expression(Node):
@@ -101,3 +102,31 @@ class ConditionalBranch(Node):
 class ConditionalExpression(Expression):
     branches: list[ConditionalBranch] = field(default_factory=list)
     fallback: Expression | None = None
+
+
+@dataclass(slots=True)
+class AsExpression(Expression):
+    """A jq binding expression such as ``.[] as $item | ...``."""
+
+    source: Expression
+    variable: str
+    body: Expression
+
+
+@dataclass(slots=True)
+class ReduceExpression(Expression):
+    """A jq reduce expression."""
+
+    source: Expression
+    variable: str
+    initial: Expression
+    update: Expression
+
+
+@dataclass(slots=True)
+class FunctionDefinition(Node):
+    """A top-level jq function definition."""
+
+    name: str
+    parameters: list[str] = field(default_factory=list)
+    body: Expression | None = None

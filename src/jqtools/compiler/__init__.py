@@ -2,15 +2,18 @@
 
 from .ast import (
     Accessor,
+    AsExpression,
     ArrayExpression,
     BinaryExpression,
     CallExpression,
     ConditionalExpression,
+    FunctionDefinition,
     Identifier,
     IndexExpression,
     Literal,
     ObjectExpression,
     Program,
+    ReduceExpression,
     UnaryExpression,
     Variable,
 )

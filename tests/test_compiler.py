@@ -3,13 +3,16 @@
 from decimal import Decimal
 
 from jqtools.compiler import (
+    AsExpression,
     BinaryExpression,
     CallExpression,
     ConditionalExpression,
+    FunctionDefinition,
     IndexExpression,
     JQCompiler,
     Literal,
     ObjectExpression,
+    ReduceExpression,
     TokenKind,
 )
 
@@ -62,3 +65,34 @@ def test_parser_builds_conditionals():
     assert isinstance(expression, ConditionalExpression)
     assert len(expression.branches) == 1
     assert expression.fallback.value == "child"
+
+
+def test_parser_builds_top_level_function_definitions():
+    program = JQCompiler().parse('def add(a; b): a + b; add(1; 2)')
+    assert len(program.definitions) == 1
+    definition = program.definitions[0]
+    assert isinstance(definition, FunctionDefinition)
+    assert definition.name == "add"
+    assert definition.parameters == ["a", "b"]
+    assert isinstance(definition.body, BinaryExpression)
+    assert isinstance(program.expression, CallExpression)
+
+
+def test_parser_supports_multiple_definitions_before_main_expression():
+    program = JQCompiler().parse('def inc(x): x + 1; def double(x): x * 2; .value | inc | double')
+    assert [definition.name for definition in program.definitions] == ["inc", "double"]
+    assert isinstance(program.expression, BinaryExpression)
+
+
+def test_parser_builds_as_binding_expression():
+    program = JQCompiler().parse('.[] as $item | . + $item')
+    assert isinstance(program.expression, AsExpression)
+    assert program.expression.variable == "$item"
+    assert isinstance(program.expression.body, BinaryExpression)
+
+
+def test_parser_builds_reduce_expression():
+    program = JQCompiler().parse('reduce .[] as $i (0; . + $i)')
+    assert isinstance(program.expression, ReduceExpression)
+    assert program.expression.variable == "$i"
+    assert isinstance(program.expression.update, BinaryExpression)

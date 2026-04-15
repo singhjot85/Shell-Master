@@ -4,17 +4,20 @@ from __future__ import annotations
 
 from .ast import (
     Accessor,
+    AsExpression,
     ArrayExpression,
     BinaryExpression,
     CallExpression,
     ConditionalBranch,
     ConditionalExpression,
+    FunctionDefinition,
     Identifier,
     IndexExpression,
     Literal,
     ObjectExpression,
     ObjectField,
     Program,
+    ReduceExpression,
     Span,
     UnaryExpression,
     Variable,
@@ -25,6 +28,7 @@ from .tokens import Token, TokenKind
 
 PRECEDENCE: dict[TokenKind, int] = {
     TokenKind.COMMA: 5,
+    TokenKind.AS: 8,
     TokenKind.PIPE: 10,
     TokenKind.OR: 20,
     TokenKind.AND: 30,
@@ -54,9 +58,14 @@ class Parser:
         self.current = 0
 
     def parse(self) -> Program:
+        definitions: list[FunctionDefinition] = []
+        while self.check(TokenKind.DEF):
+            definitions.append(self.parse_definition())
+
         expression = self.parse_expression()
         self.consume(TokenKind.EOF, "expected end of input")
-        return Program(span=Span(expression.span.start, expression.span.end), expression=expression)
+        start = definitions[0].span.start if definitions else expression.span.start
+        return Program(span=Span(start, expression.span.end), definitions=definitions, expression=expression)
 
     def parse_expression(self, precedence: int = 0):
         token = self.advance()
@@ -97,6 +106,8 @@ class Parser:
             return self.parse_object(token)
         if token.kind is TokenKind.IF:
             return self.parse_if_expression(token)
+        if token.kind is TokenKind.REDUCE:
+            return self.parse_reduce_expression(token)
         raise ParserError(f"unexpected token {token.kind.value}", token.start)
 
     def led(self, token: Token, left):
@@ -124,6 +135,17 @@ class Parser:
                 left=left,
                 operator=token.lexeme,
                 right=right,
+            )
+
+        if token.kind is TokenKind.AS:
+            variable = self.consume(TokenKind.VARIABLE, "expected variable after 'as'")
+            self.consume(TokenKind.PIPE, "expected '|' after jq binding variable")
+            body = self.parse_expression(PRECEDENCE[TokenKind.AS])
+            return AsExpression(
+                span=Span(left.span.start, body.span.end),
+                source=left,
+                variable=variable.lexeme,
+                body=body,
             )
 
         if token.kind is TokenKind.LPAREN:
@@ -222,6 +244,52 @@ class Parser:
             span=Span(opening.start, closing.end),
             branches=branches,
             fallback=fallback,
+        )
+
+    def parse_reduce_expression(self, opening: Token) -> ReduceExpression:
+        """Parse jq reduce expressions."""
+
+        source = self.parse_expression(PRECEDENCE[TokenKind.AS])
+        self.consume(TokenKind.AS, "expected 'as' in reduce expression")
+        variable = self.consume(TokenKind.VARIABLE, "expected reduce variable after 'as'")
+        self.consume(TokenKind.LPAREN, "expected '(' after reduce variable")
+        initial = self.parse_expression(PRECEDENCE[TokenKind.COMMA])
+        self.consume(TokenKind.SEMICOLON, "expected ';' between reduce accumulator expressions")
+        update = self.parse_expression(PRECEDENCE[TokenKind.COMMA])
+        closing = self.consume(TokenKind.RPAREN, "expected ')' after reduce accumulator")
+        return ReduceExpression(
+            span=Span(opening.start, closing.end),
+            source=source,
+            variable=variable.lexeme,
+            initial=initial,
+            update=update,
+        )
+
+    def parse_definition(self) -> FunctionDefinition:
+        """Parse a top-level jq function definition."""
+
+        opening = self.consume(TokenKind.DEF, "expected 'def' at function definition start")
+        name = self.consume(TokenKind.IDENTIFIER, "expected function name after 'def'")
+        parameters: list[str] = []
+
+        if self.match(TokenKind.LPAREN):
+            if not self.check(TokenKind.RPAREN):
+                while True:
+                    parameter = self.consume(TokenKind.IDENTIFIER, "expected function parameter name")
+                    parameters.append(parameter.lexeme)
+                    if not self.match(TokenKind.SEMICOLON, TokenKind.COMMA):
+                        break
+            self.consume(TokenKind.RPAREN, "expected ')' after function parameter list")
+
+        self.consume(TokenKind.COLON, "expected ':' after function signature")
+        body = self.parse_expression()
+        closing = self.consume(TokenKind.SEMICOLON, "expected ';' after function definition body")
+
+        return FunctionDefinition(
+            span=Span(opening.start, closing.end),
+            name=name.lexeme,
+            parameters=parameters,
+            body=body,
         )
 
     def get_precedence(self, kind: TokenKind) -> int:

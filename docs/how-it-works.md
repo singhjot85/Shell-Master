@@ -53,8 +53,6 @@ This is the public package surface.
 
 ## Other Folders
 
-- `automations/`
-  Compatibility shims for the older package path.
 - `tests/`
   Unit and smoke-style tests for compiler and tooling behavior.
 - `examples/`

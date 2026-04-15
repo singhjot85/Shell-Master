@@ -2,17 +2,12 @@
 
 from jqtools import JQCompiler, JQDebugger, JQFormatter
 
+with open("examples\example.jq", "r") as f:
+    jq_program = f.read()
 
 compiler = JQCompiler()
-result = compiler.compile('.people[] | {name: .name, active: true}')
+result = compiler.compile(jq_program)
 
-print("TOKENS")
-for token in result.tokens:
-    print("\t", token)
-
-print("\nFORMATTED")
-print("\t", JQFormatter().render_program(result.ast))
-
-print("\nTRACE")
-for line in JQDebugger().trace(".people[] | .name").ast_summary:
-    print("\t", line)
+formatted = JQFormatter().render_program(result.ast)
+with open("examples\\formatted.jq", "w") as f:
+    f.write(formatted)
