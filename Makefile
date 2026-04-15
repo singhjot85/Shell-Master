@@ -99,3 +99,6 @@ cli-debug:
 
 clean:
 	Get-ChildItem -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
+
+run:
+	poetry run uvicorn app.entrypoint:app --reload

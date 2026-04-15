@@ -1,0 +1,166 @@
+:root {
+    --app-bg: #f6f1e8;
+    --app-panel: rgba(255, 252, 245, 0.82);
+    --app-ink: #1d1a16;
+    --app-muted: #6b6259;
+    --app-accent: #b95c38;
+    --app-accent-dark: #923f1f;
+    --app-border: rgba(29, 26, 22, 0.08);
+    --app-shadow: 0 24px 80px rgba(79, 52, 33, 0.12);
+    --app-radius-xl: 2rem;
+    --app-radius-lg: 1.5rem;
+    --app-font-display: "Georgia", "Times New Roman", serif;
+    --app-font-body: "Segoe UI", sans-serif;
+}
+
+body.app-shell {
+    background:
+        radial-gradient(circle at top left, rgba(239, 180, 113, 0.28), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(185, 92, 56, 0.2), transparent 28%),
+        var(--app-bg);
+    color: var(--app-ink);
+    font-family: var(--app-font-body);
+    min-height: 100vh;
+}
+
+.app-backdrop {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(rgba(255,255,255,0.25) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.25) 1px, transparent 1px);
+    background-size: 26px 26px;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent 85%);
+}
+
+.app-frame {
+    position: relative;
+    z-index: 1;
+}
+
+.glass-nav,
+.hero-panel,
+.tool-card,
+.tool-panel {
+    background: var(--app-panel);
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow);
+    backdrop-filter: blur(16px);
+}
+
+.navbar-brand,
+.display-5,
+.display-6,
+.h4,
+.h5 {
+    font-family: var(--app-font-display);
+}
+
+.tracking-wide {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.eyebrow {
+    display: inline-block;
+    font-size: 0.8rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--app-accent-dark);
+    font-weight: 700;
+}
+
+.nav-link {
+    color: var(--app-muted);
+}
+
+.nav-link.active,
+.nav-link:hover {
+    color: var(--app-ink);
+}
+
+.btn-primary {
+    background-color: var(--app-accent);
+    border-color: var(--app-accent);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--app-accent-dark);
+    border-color: var(--app-accent-dark);
+}
+
+.hero-panel {
+    overflow: hidden;
+}
+
+.code-preview {
+    background: #241c18;
+    color: #f7efe4;
+    min-height: 100%;
+}
+
+.tool-card,
+.tool-panel {
+    border-radius: var(--app-radius-lg);
+}
+
+.formatter-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.jq-editor {
+    min-height: 24rem;
+    width: 100%;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(29, 26, 22, 0.12);
+    background: rgba(255, 255, 255, 0.68);
+    color: var(--app-ink);
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    padding: 1rem 1.1rem;
+    resize: vertical;
+    overflow: auto;
+    white-space: pre;
+    word-break: normal;
+    overflow-wrap: normal;
+    tab-size: 4;
+}
+
+.jq-editor:focus {
+    border-color: rgba(185, 92, 56, 0.5);
+    box-shadow: 0 0 0 0.2rem rgba(185, 92, 56, 0.12);
+}
+
+.output-box {
+    background: rgba(36, 28, 24, 0.94);
+    color: #f7efe4;
+    flex: 1 1 auto;
+}
+
+.output-box[readonly] {
+    opacity: 1;
+    cursor: text;
+}
+
+.output-box::placeholder {
+    color: rgba(247, 239, 228, 0.58);
+}
+
+.page-heading {
+    max-width: 42rem;
+}
+
+@media (max-width: 991.98px) {
+    .hero-panel,
+    .tool-card,
+    .tool-panel {
+        border-radius: 1.4rem;
+    }
+
+    .jq-editor {
+        min-height: 18rem;
+    }
+}
