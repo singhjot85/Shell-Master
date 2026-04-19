@@ -1,7 +1,10 @@
 {
-    "jq.lsp.enabled": true,
-    "jq.lsp.path": "jq-lsp",
-    "python-envs.defaultEnvManager": "ms-python.python:venv",
-    "python.defaultInterpreterPath": "C:\\Users\\SinghJot\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\automations-iF71CK2d-py3.12\\Scripts\\python.exe",
+    "python-envs.defaultEnvManager": "ms-python.python:poetry",
+    "python.defaultInterpreterPath": "C:\\Users\\SinghJot\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\jqtools-iF71CK2d-py3.12\\Scripts\\python.exe",
     "python.terminal.activateEnvironment": true,
+    "python-envs.defaultPackageManager": "ms-python.python:poetry",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}\\src",
+        "C:\\Users\\SinghJot\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\jqtools-iF71CK2d-py3.12\\Lib\\site-packages"
+    ]
 }

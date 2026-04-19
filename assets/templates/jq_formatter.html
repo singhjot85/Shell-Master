@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container pb-5">
+    <div class="page-heading mb-4">
+        <span class="eyebrow">Tool</span>
+        <h1 class="display-6 fw-semibold mt-2">JQ Formatter</h1>
+        <p class="text-secondary mb-0">Paste jq, format it through the core service, and copy the formatted output directly.</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-6">
+            <section class="tool-panel rounded-4 p-4 h-100 formatter-panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">Input</h2>
+                    <button class="btn btn-outline-secondary btn-sm" id="load-sample" type="button">Load Sample</button>
+                </div>
+                {% include "components/custom_text_box.html" %}
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    {% with button_id="format-button", button_label="Format JQ", button_variant="primary" %}
+                        {% include "components/button.html" %}
+                    {% endwith %}
+                    <button class="btn btn-outline-dark" id="clear-button" type="button">Clear</button>
+                </div>
+                <div class="alert alert-danger mt-3 d-none" id="error-box" role="alert"></div>
+            </section>
+        </div>
+
+        <div class="col-xl-6">
+            <section class="tool-panel rounded-4 p-4 h-100 formatter-panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">Formatted Output</h2>
+                    <button class="btn btn-outline-secondary btn-sm" id="copy-output" type="button">Copy</button>
+                </div>
+                <textarea
+                    class="form-control jq-editor output-box"
+                    id="formatted-output"
+                    rows="18"
+                    readonly
+                    spellcheck="false"
+                    wrap="off"
+                    placeholder="Formatted jq will appear here."
+                ></textarea>
+            </section>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const sampleInput = {{ context.sample_input | tojson }};
+    const inputBox = document.getElementById("jq-source");
+    const outputBox = document.getElementById("formatted-output");
+    const errorBox = document.getElementById("error-box");
+    const formatButton = document.getElementById("format-button");
+
+    document.getElementById("load-sample").addEventListener("click", () => {
+        inputBox.value = sampleInput;
+    });
+
+    document.getElementById("clear-button").addEventListener("click", () => {
+        inputBox.value = "";
+        outputBox.value = "";
+        resizeEditor(outputBox);
+        hideError();
+    });
+
+    document.getElementById("copy-output").addEventListener("click", async () => {
+        if (!outputBox.value) {
+            return;
+        }
+        await navigator.clipboard.writeText(outputBox.value);
+    });
+
+    formatButton.addEventListener("click", async () => {
+        hideError();
+        outputBox.value = "";
+
+        const source = inputBox.value.trim();
+        if (!source) {
+            showError("Enter some jq before formatting.");
+            return;
+        }
+
+        formatButton.disabled = true;
+        formatButton.textContent = "Formatting...";
+
+        try {
+            const response = await fetch("/api/jq/format", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ source })
+            });
+
+            const payload = await response.json();
+            if (!payload.ok) {
+                showError(payload.error || "Formatting failed.");
+                return;
+            }
+
+            outputBox.value = payload.formatted || "";
+            resizeEditor(outputBox);
+        } catch (error) {
+            showError("Could not reach the formatter service.");
+        } finally {
+            formatButton.disabled = false;
+            formatButton.textContent = "Format JQ";
+        }
+    });
+
+    function showError(message) {
+        errorBox.textContent = message;
+        errorBox.classList.remove("d-none");
+    }
+
+    function hideError() {
+        errorBox.textContent = "";
+        errorBox.classList.add("d-none");
+    }
+
+    function resizeEditor(element) {
+        element.style.height = "auto";
+        element.style.height = `${Math.max(element.scrollHeight, 420)}px`;
+    }
+
+    resizeEditor(outputBox);
+</script>
+{% endblock %}

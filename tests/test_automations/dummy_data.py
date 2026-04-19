@@ -1,4 +1,7 @@
-from automations.jq_core.ast import *
+"""Legacy compatibility fixture module.
+
+The active tests now live in `tests/test_compiler.py` and `tests/test_tooling.py`.
+"""
 
 INPUT_TYPE_1 = {
     "TESTCASE_2": ",",
